@@ -9,7 +9,7 @@ import mlflow.sklearn
 from flask import Flask, render_template, request, jsonify
 
 from mlops.datasets import DATASETS, load_dataset
-from mlops.algorithms import ALGORITHMS, list_algorithms, all_algorithm_names
+from mlops.algorithms import ALGORITHMS, list_algorithms, all_algorithm_names, algorithms_for_json
 from mlops.trainer import (
     training_jobs, automl_jobs,
     start_training, start_automl,
@@ -144,7 +144,7 @@ def dashboard():
                            algo_counts=json.dumps(algo_counts),
                            ds_counts=json.dumps(ds_counts),
                            datasets=DATASETS,
-                           algorithms=ALGORITHMS)
+                           algorithms=algorithms_for_json())
 
 
 @app.route("/experiments")
@@ -255,7 +255,7 @@ def models():
 def automl():
     return render_template("automl.html",
                            datasets=DATASETS,
-                           algorithms=ALGORITHMS)
+                           algorithms=algorithms_for_json())
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -426,7 +426,7 @@ def api_automl_status(job_id):
 def api_algorithms():
     task = request.args.get("task", "classification")
     try:
-        return jsonify(list_algorithms(task))
+        return jsonify(algorithms_for_json(task))
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 

@@ -390,3 +390,19 @@ def all_algorithm_names(task: str) -> list[str]:
     for cat in ALGORITHMS[task].values():
         names.extend(cat.keys())
     return names
+
+
+def algorithms_for_json(task: str | None = None) -> dict:
+    """Return ALGORITHMS (or a task subset) as a JSON-serializable dict.
+
+    Removes the non-serializable ``"class"`` key and converts tuples to lists.
+    """
+    def _clean(obj):
+        if isinstance(obj, dict):
+            return {k: _clean(v) for k, v in obj.items() if k != "class"}
+        if isinstance(obj, (list, tuple)):
+            return [_clean(i) for i in obj]
+        return obj
+
+    src = ALGORITHMS if task is None else ALGORITHMS[task]
+    return _clean(src)
