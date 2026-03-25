@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /e/HuggingFace/AutoMLOps -not -path */__pycache__/* -not -path */.git/* -not -path */node_modules/*)"
+    ]
+  }
+}

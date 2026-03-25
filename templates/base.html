@@ -18,6 +18,9 @@
 
   <link rel="stylesheet" href="/static/css/style.css">
 
+  <!-- Apply saved theme before render to prevent flash -->
+  <script>document.documentElement.setAttribute('data-theme',localStorage.getItem('theme')||'dark');</script>
+
   {% block head_extra %}{% endblock %}
 </head>
 <body>
@@ -73,6 +76,9 @@
   </button>
   <span class="topnav-title">{% block page_title %}AutoMLOps{% endblock %}</span>
   <span class="topnav-badge"><i class="fa-solid fa-circle" style="color:#22c55e;font-size:.55rem"></i> Live</span>
+  <button class="btn btn-ghost btn-sm" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark theme" style="width:32px;padding:5px 0;justify-content:center">
+    <i class="fa-solid fa-moon" id="theme-icon"></i>
+  </button>
   {% block topnav_actions %}{% endblock %}
 </header>
 

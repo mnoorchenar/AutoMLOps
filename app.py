@@ -444,7 +444,10 @@ def api_datasets():
 def api_stats():
     client = _mlflow_client()
     try:
-        runs = client.search_runs(experiment_ids=[], max_results=500)
+        runs = client.search_runs(
+            experiment_ids=[], max_results=500,
+            order_by=["start_time DESC"],
+        )
     except Exception:
         runs = []
     finished = [r for r in runs if r.info.status == "FINISHED"]
@@ -453,11 +456,38 @@ def api_stats():
         v = r.data.metrics.get("accuracy") or r.data.metrics.get("r2_score") or 0
         if v > best:
             best = v
+
+    recent = []
+    for r in runs[:8]:
+        m = r.data.metrics
+        primary = m.get("accuracy") or m.get("r2_score") or 0
+        recent.append({
+            "run_id":         r.info.run_id[:8],
+            "algorithm":      r.data.tags.get("algorithm", "—"),
+            "category":       r.data.tags.get("category",  "—"),
+            "dataset":        r.data.tags.get("dataset",   "—"),
+            "primary_metric": round(primary, 4),
+            "status":         r.info.status,
+            "duration":       round((r.info.end_time - r.info.start_time) / 1000, 1)
+                              if r.info.end_time else None,
+        })
+
+    algo_counts: dict = {}
+    ds_counts:   dict = {}
+    for r in finished:
+        cat = r.data.tags.get("category", "Other")
+        algo_counts[cat] = algo_counts.get(cat, 0) + 1
+        ds = r.data.tags.get("dataset", "Other")
+        ds_counts[ds] = ds_counts.get(ds, 0) + 1
+
     return jsonify({
         "total_runs":     len(runs),
         "completed_runs": len(finished),
         "best_metric":    round(best, 4),
         "n_experiments":  len(set(r.info.experiment_id for r in runs)),
+        "recent_runs":    recent,
+        "algo_counts":    algo_counts,
+        "ds_counts":      ds_counts,
     })
 
 

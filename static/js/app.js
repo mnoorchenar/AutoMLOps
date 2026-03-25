@@ -47,3 +47,22 @@ function activateTab(panelId, btn, groupClass) {
   document.getElementById(panelId)?.classList.add('active');
   if (btn) btn.classList.add('active');
 }
+
+// ── Light / dark theme ─────────────────────────────────────────────────────
+function toggleTheme() {
+  document.body.classList.add('theme-transition');
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next    = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.className = next === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+  document.dispatchEvent(new CustomEvent('themechange', { detail: next }));
+  setTimeout(() => document.body.classList.remove('theme-transition'), 300);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const icon = document.getElementById('theme-icon');
+  if (icon) icon.className = current === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+});

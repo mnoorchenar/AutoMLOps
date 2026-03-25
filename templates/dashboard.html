@@ -164,51 +164,99 @@
 
 {% block scripts %}
 <script>
-const ALGO_DATA = {{ algorithms | tojson }};
-const ALGO_COUNTS = {{ algo_counts }};
-const DS_COUNTS   = {{ ds_counts }};
+const ALGO_DATA   = {{ algorithms | tojson }};
+let _algoCounts   = {{ algo_counts }};
+let _dsCounts     = {{ ds_counts }};
 
-// ── Charts ────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  const dark = '#0d1117', bg2 = '#161b22', border = '#30363d', txt = '#8b949e';
+const CHART_COLORS = ['#8b5cf6','#3b82f6','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#a855f7'];
 
-  // Donut — algorithm categories
-  const cats  = Object.keys(ALGO_COUNTS);
-  const vals  = Object.values(ALGO_COUNTS);
-  const COLORS = ['#8b5cf6','#3b82f6','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#a855f7'];
-  Plotly.newPlot('chart-algo', [{
+// Returns Plotly-compatible colors matching the current theme
+function getChartTheme() {
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  return {
+    bg:         light ? '#ffffff' : '#161b22',
+    border:     light ? '#d0d7de' : '#30363d',
+    txt:        light ? '#57606a' : '#8b949e',
+    annotation: light ? '#24292f' : '#e6edf3',
+  };
+}
+
+// ── Chart rendering (called on load, after refresh, and on theme change) ──
+function renderCharts(algoCounts, dsCounts) {
+  const c    = getChartTheme();
+  const cats = Object.keys(algoCounts);
+  const vals = Object.values(algoCounts);
+
+  Plotly.react('chart-algo', [{
     type: 'pie', hole: .55,
     labels: cats, values: vals,
-    marker: { colors: COLORS.slice(0, cats.length) },
+    marker: { colors: CHART_COLORS.slice(0, cats.length) },
     textinfo: 'none',
     hovertemplate: '<b>%{label}</b><br>%{value} runs<extra></extra>',
   }], {
-    paper_bgcolor: bg2, plot_bgcolor: bg2,
+    paper_bgcolor: c.bg, plot_bgcolor: c.bg,
     margin: { t:8, b:8, l:8, r:8 },
-    legend: { font: { color: txt, size: 11 }, bgcolor: 'transparent', x: 1.05 },
+    legend: { font: { color: c.txt, size: 11 }, bgcolor: 'transparent', x: 1.05 },
     showlegend: cats.length > 0,
     annotations: [{ text: `<b>${vals.reduce((a,b)=>a+b,0)}</b><br><span style="font-size:10px">runs</span>`,
-                    x:.5, y:.5, font:{size:14,color:'#e6edf3'}, showarrow:false }],
+                    x:.5, y:.5, font:{size:14, color:c.annotation}, showarrow:false }],
   }, { responsive: true, displayModeBar: false });
 
-  // Bar — datasets
-  const dsKeys = Object.keys(DS_COUNTS);
-  const dsVals = Object.values(DS_COUNTS);
-  Plotly.newPlot('chart-ds', [{
+  const dsKeys = Object.keys(dsCounts);
+  const dsVals = Object.values(dsCounts);
+  Plotly.react('chart-ds', [{
     type: 'bar', orientation: 'h',
     y: dsKeys, x: dsVals,
     marker: { color: '#3b82f6', opacity: .85 },
     hovertemplate: '<b>%{y}</b>: %{x} runs<extra></extra>',
   }], {
-    paper_bgcolor: bg2, plot_bgcolor: bg2,
+    paper_bgcolor: c.bg, plot_bgcolor: c.bg,
     margin: { t:8, b:24, l:8, r:16 },
-    xaxis: { gridcolor: border, color: txt, tickfont:{size:10} },
-    yaxis: { color: txt, tickfont:{size:10}, automargin:true },
+    xaxis: { gridcolor: c.border, color: c.txt, tickfont:{size:10} },
+    yaxis: { color: c.txt, tickfont:{size:10}, automargin:true },
     bargap: .35,
   }, { responsive: true, displayModeBar: false });
+}
 
+// ── Live-update the recent-runs table ──────────────────────────────────────
+function updateRecentTable(rows) {
+  const tbody = document.querySelector('#recent-table tbody');
+  if (!tbody) return;
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <div class="empty-state-icon">🔬</div>
+        <div class="empty-state-title">No runs yet</div>
+        <div>Click <strong>New Run</strong> to train your first model</div>
+      </div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(r => {
+    const mc = r.primary_metric >= 0.9 ? 'metric-good' : r.primary_metric >= 0.7 ? 'metric-medium' : 'metric-bad';
+    const sb = r.status === 'FINISHED'
+      ? `<span class="badge badge-success"><i class="fa-solid fa-check"></i> Done</span>`
+      : r.status === 'RUNNING'
+      ? `<span class="badge badge-info"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span> Running</span>`
+      : `<span class="badge badge-muted">${r.status}</span>`;
+    return `<tr>
+      <td><code style="font-size:.8rem;color:var(--accent-light)">${r.run_id}</code></td>
+      <td><strong>${r.algorithm}</strong></td>
+      <td><span class="badge badge-purple">${r.category}</span></td>
+      <td>${r.dataset}</td>
+      <td><span class="metric-val ${mc}">${r.primary_metric}</span></td>
+      <td>${r.duration != null ? r.duration + 's' : '—'}</td>
+      <td>${sb}</td>
+    </tr>`;
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderCharts(_algoCounts, _dsCounts);
   populateCategories();
 });
+
+// Re-render charts when theme changes so colors match
+document.addEventListener('themechange', () => renderCharts(_algoCounts, _dsCounts));
 
 // ── Train modal helpers ────────────────────────────────────────────────────
 function updateTaskType() {
@@ -275,8 +323,8 @@ function pollTraining(jobId) {
   const resultD = document.getElementById('train-result');
 
   const iv = setInterval(async () => {
-    const res  = await fetch(`/api/run/${jobId}/status`);
-    const job  = await res.json();
+    const res = await fetch(`/api/run/${jobId}/status`);
+    const job = await res.json();
 
     bar.style.width = job.progress + '%';
     pct.textContent = job.progress + '%';
@@ -285,7 +333,7 @@ function pollTraining(jobId) {
     if (job.status === 'completed') {
       clearInterval(iv);
       statusT.textContent = 'Completed';
-      const m = job.metrics || {};
+      const m    = job.metrics || {};
       const keys = Object.keys(m);
       const primary = keys[0];
       resultD.style.display = 'block';
@@ -313,6 +361,7 @@ function pollTraining(jobId) {
   }, 1000);
 }
 
+// ── Full dashboard refresh (stats + table + charts) ────────────────────────
 async function refreshStats() {
   try {
     const r = await fetch('/api/stats');
@@ -321,6 +370,12 @@ async function refreshStats() {
     document.getElementById('stat-completed').textContent = s.completed_runs;
     document.getElementById('stat-best').textContent      = s.best_metric;
     document.getElementById('stat-exps').textContent      = s.n_experiments;
+    if (s.recent_runs) updateRecentTable(s.recent_runs);
+    if (s.algo_counts && s.ds_counts) {
+      _algoCounts = s.algo_counts;
+      _dsCounts   = s.ds_counts;
+      renderCharts(_algoCounts, _dsCounts);
+    }
   } catch(_) {}
 }
 </script>
