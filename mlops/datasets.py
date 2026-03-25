@@ -74,8 +74,11 @@ def load_dataset(name: str, test_size: float = 0.2, random_state: int = 42):
         list(data.target_names) if hasattr(data, "target_names") else None
     )
 
+    # Stratify classification splits so each class is proportionally
+    # represented in the test set — avoids overly easy / hard partitions.
+    stratify = y if cfg["task"] == "classification" else None
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=random_state
+        X, y, test_size=test_size, random_state=random_state, stratify=stratify
     )
 
     metadata = {

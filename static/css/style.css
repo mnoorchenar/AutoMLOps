@@ -485,6 +485,26 @@ tr:hover td { background: var(--bg-hover); }
 .empty-state-icon { font-size: 3rem; margin-bottom: 12px; }
 .empty-state-title { font-size: 1rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; }
 
+/* ── Workflow banner ──────────────────────────────────────────────────────── */
+.workflow-step {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  font-size: .75rem; font-weight: 500; color: var(--text-secondary);
+  padding: 8px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  min-width: 80px; text-align: center;
+}
+.workflow-step i { font-size: 1.1rem; }
+.workflow-arrow {
+  color: var(--text-muted); font-size: .8rem;
+  padding: 0 6px;
+}
+@media (max-width: 768px) {
+  .workflow-arrow { display: none; }
+  .workflow-step  { min-width: 60px; padding: 6px 8px; font-size: .7rem; }
+}
+
 /* ── Light theme ──────────────────────────────────────────────────────────── */
 [data-theme="light"] {
   --bg-primary:    #f6f8fa;

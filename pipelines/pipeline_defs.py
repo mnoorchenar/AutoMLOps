@@ -31,7 +31,7 @@ def _train_model(ctx, results):
     import mlflow, mlflow.sklearn
 
     ds   = ctx.get("dataset", "Iris Flowers")
-    cat  = ctx.get("category", "Ensemble / Boosting")
+    cat  = ctx.get("category", "Tree-Based")
     alg  = ctx.get("algorithm", "Random Forest")
     task = ctx.get("task_type", "classification")
 

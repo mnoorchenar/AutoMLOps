@@ -11,8 +11,78 @@
 {% endblock %}
 
 {% block content %}
-<div class="page-title">Overview</div>
-<div class="page-sub">Real-time ML experiment tracking powered by MLflow</div>
+<div class="page-title">Platform Overview</div>
+<div class="page-sub">AutoML experiment sweeps + Airflow-style pipeline orchestration, tracked end-to-end with MLflow</div>
+
+<!-- ── Tech stack explanation ─────────────────────────────────────────── -->
+<div class="grid-2 mb-20">
+
+  <div class="card tech-card" style="border-top:3px solid var(--accent)">
+    <div class="card-header" style="margin-bottom:10px">
+      <div class="card-title">
+        <i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i>
+        AutoML Engine
+      </div>
+      <span class="badge badge-purple">scikit-learn · XGBoost · LightGBM</span>
+    </div>
+    <p style="font-size:.84rem;color:var(--text-secondary);line-height:1.6;margin-bottom:12px">
+      Sweeps <strong>50+ algorithms</strong> across Linear, Tree-Based, Ensemble, SVM, KNN and Neural Network families.
+      Every trial is logged to MLflow — metrics, params, and serialised model artefacts.
+      Use the <a href="/automl">AutoML</a> page to rank algorithms on any dataset in one click.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="badge badge-muted"><i class="fa-solid fa-robot" style="color:var(--accent)"></i> 50+ Algorithms</span>
+      <span class="badge badge-muted"><i class="fa-solid fa-chart-line" style="color:var(--accent-blue)"></i> MLflow Tracking</span>
+      <span class="badge badge-muted"><i class="fa-solid fa-trophy" style="color:var(--warning)"></i> Auto-Ranking</span>
+      <span class="badge badge-muted"><i class="fa-solid fa-code-branch" style="color:var(--success)"></i> Model Registry</span>
+    </div>
+  </div>
+
+  <div class="card tech-card" style="border-top:3px solid var(--accent-blue)">
+    <div class="card-header" style="margin-bottom:10px">
+      <div class="card-title">
+        <i class="fa-solid fa-diagram-project" style="color:var(--accent-blue)"></i>
+        Pipeline Orchestration
+      </div>
+      <span class="badge badge-info">Airflow-inspired DAG engine</span>
+    </div>
+    <p style="font-size:.84rem;color:var(--text-secondary);line-height:1.6;margin-bottom:12px">
+      Runs ML workflows as <strong>Directed Acyclic Graphs</strong> — the same paradigm used by Apache Airflow.
+      Three built-in pipelines: <em>Training</em> (ingest → train → register → deploy),
+      <em>Retraining</em> (drift detection → retrain → A/B test → promote), and
+      <em>Data Processing</em> (clean → encode → scale → feature store).
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="badge badge-muted"><i class="fa-solid fa-network-wired" style="color:var(--accent-blue)"></i> DAG Execution</span>
+      <span class="badge badge-muted"><i class="fa-solid fa-wave-square" style="color:var(--danger)"></i> Drift Detection</span>
+      <span class="badge badge-muted"><i class="fa-solid fa-rotate" style="color:var(--success)"></i> Auto-Retraining</span>
+      <span class="badge badge-muted"><i class="fa-solid fa-rocket" style="color:var(--warning)"></i> Staging Deploy</span>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Workflow banner ────────────────────────────────────────────────── -->
+<div class="card mb-20" style="background:linear-gradient(135deg,#8b5cf608,#3b82f608);border-color:var(--border-color);padding:16px 22px">
+  <div style="display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center">
+    <div class="workflow-step"><i class="fa-solid fa-database" style="color:var(--accent-blue)"></i><span>Load Dataset</span></div>
+    <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+    <div class="workflow-step"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i><span>AutoML Sweep</span></div>
+    <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+    <div class="workflow-step"><i class="fa-solid fa-flask" style="color:var(--success)"></i><span>MLflow Tracking</span></div>
+    <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+    <div class="workflow-step"><i class="fa-solid fa-diagram-project" style="color:var(--accent-blue)"></i><span>Pipeline DAG</span></div>
+    <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+    <div class="workflow-step"><i class="fa-solid fa-box-archive" style="color:var(--warning)"></i><span>Model Registry</span></div>
+    <div class="workflow-arrow"><i class="fa-solid fa-arrow-right"></i></div>
+    <div class="workflow-step"><i class="fa-solid fa-rocket" style="color:var(--danger)"></i><span>Deploy</span></div>
+  </div>
+</div>
+
+<!-- ── Live metrics ───────────────────────────────────────────────────── -->
+<div class="page-sub" style="margin-top:4px;margin-bottom:12px">
+  <i class="fa-solid fa-chart-bar" style="color:var(--accent)"></i> Live Experiment Metrics
+</div>
 
 <!-- Stat cards -->
 <div class="stat-grid">
@@ -57,7 +127,7 @@
 <!-- Recent runs -->
 <div class="card">
   <div class="card-header">
-    <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--warning)"></i> Recent Runs</div>
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--warning)"></i> Recent Training Runs <span style="font-size:.75rem;font-weight:400;color:var(--text-muted);margin-left:6px">— each row is one MLflow-tracked experiment</span></div>
     <a href="/experiments" class="btn btn-ghost btn-sm">View all <i class="fa-solid fa-arrow-right"></i></a>
   </div>
   <div class="table-wrap">
