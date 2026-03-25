@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>[PROJECT TITLE] · [YOUR NAME]</title>
+
+<!-- ▶ THEME FLICKER FIX -->
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('mn-theme') || 'dark')</script>
+
+<!-- ▶ FAVICON: Replace initials "MN" and colors as needed -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%234f8ef7'/%3E%3Cstop offset='100%25' stop-color='%2306b6d4'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23070d1f'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='Segoe UI,system-ui,sans-serif' font-weight='900' font-size='26' fill='url(%23g)'%3E[INITIALS]%3C/text%3E%3C/svg%3E">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<!-- ▶ Point these to your shared stylesheet and script if you have them -->
+<!-- <link rel="stylesheet" href="/projects/shared.css"> -->
+<!-- <script src="/projects/shared.js" defer></script> -->
+
+<style>
+/* ═══════════════════════════════════════════════════
+   CSS VARIABLES — Light/Dark theme
+   Accent: blue (#4f8ef7) + gold (#f59e0b)
+   Change --accent and --gold to match your project.
+════════════════════════════════════════════════════ */
+:root {
+  --accent: #4f8ef7;
+  --gold:   #f59e0b;
+  --teal:   #06b6d4;
+  --green:  #22c55e;
+  --radius: 14px;
+
+  /* Dark theme defaults */
+  --body-bg:          #070d1f;
+  --text:             #e2e8f0;
+  --muted:            #8892a4;
+  --glass:            rgba(255,255,255,.04);
+  --glass-border:     rgba(255,255,255,.08);
+  --card-hover-bg:    rgba(255,255,255,.07);
+  --card-hover-border:rgba(79,142,247,.3);
+  --section-alt:      #0b1120;
+}
+[data-theme="light"] {
+  --body-bg:          #f8fafc;
+  --text:             #0f172a;
+  --muted:            #4b5675;
+  --glass:            rgba(0,0,0,.03);
+  --glass-border:     rgba(0,0,0,.08);
+  --card-hover-bg:    rgba(0,0,0,.05);
+  --card-hover-border:rgba(37,99,235,.25);
+  --section-alt:      #f1f5f9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--body-bg); color: var(--text); transition: background .35s, color .35s; }
+a { text-decoration: none; }
+code { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .88em; background: rgba(79,142,247,.1); padding: 1px 5px; border-radius: 4px; }
+
+/* ── SECTION TAG ── */
+.s-tag { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; padding: 3px 10px; border-radius: 6px; margin-bottom: 10px; }
+.s-tag-blue { background: rgba(79,142,247,.12); color: var(--accent); border: 1px solid rgba(79,142,247,.2); }
+.s-tag-gold { background: rgba(245,158,11,.12); color: var(--gold);   border: 1px solid rgba(245,158,11,.2); }
+.s-tag-teal { background: rgba(6,182,212,.12);  color: var(--teal);   border: 1px solid rgba(6,182,212,.2); }
+
+/* ── GRADIENT TEXT ── */
+.grad-text { background: linear-gradient(135deg, var(--accent), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* ── HERO ── */
+.hero {
+  padding: 80px 24px 56px;
+  background: var(--body-bg);
+  position: relative; overflow: hidden; transition: background .35s;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 55% at 50% -10%, rgba(79,142,247,.15) 0%, transparent 65%);
+}
+[data-theme="light"] .hero::before {
+  background: radial-gradient(ellipse 80% 55% at 50% -10%, rgba(37,99,235,.09) 0%, transparent 65%);
+}
+.hero::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(79,142,247,.035) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(79,142,247,.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.breadcrumb { font-size: .78rem; color: var(--muted); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.breadcrumb a { color: var(--muted); transition: .2s; }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb span { opacity: .4; }
+
+/* ── PILLS ── */
+.tag-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; }
+.pill-blue { background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.25); color: var(--accent); }
+.pill-gold { background: rgba(245,158,11,.12); border: 1px solid rgba(245,158,11,.25); color: var(--gold); }
+.pill-teal { background: rgba(6,182,212,.12);  border: 1px solid rgba(6,182,212,.25);  color: var(--teal); }
+[data-theme="light"] .pill-blue { background: rgba(37,99,235,.1); border-color: rgba(37,99,235,.25); }
+[data-theme="light"] .pill-gold { background: rgba(217,119,6,.1); border-color: rgba(217,119,6,.25); color: #92400e; }
+[data-theme="light"] .pill-teal { background: rgba(8,145,178,.1); border-color: rgba(8,145,178,.25); color: #0e7490; }
+
+h1 { font-size: clamp(1.7rem,3.5vw,2.7rem); font-weight: 900; line-height: 1.2; margin-bottom: 20px; max-width: 820px; color: var(--text); }
+.hero-sub { font-size: 1rem; color: var(--muted); max-width: 680px; margin-bottom: 28px; line-height: 1.65; }
+.hero-sub strong { color: var(--text); }
+.hero-meta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 24px; font-size: .83rem; color: var(--muted); }
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
+.hero-meta i { color: var(--accent); }
+.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ── BUTTONS ── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 8px; font-size: .85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all .2s; font-family: inherit; text-decoration: none; }
+.btn-blue { background: rgba(79,142,247,.18); color: var(--accent); border-color: rgba(79,142,247,.35); }
+.btn-blue:hover { background: rgba(79,142,247,.3); transform: translateY(-2px); }
+.btn-gold { background: rgba(245,158,11,.15); color: var(--gold); border-color: rgba(245,158,11,.35); }
+.btn-gold:hover { background: rgba(245,158,11,.28); transform: translateY(-2px); }
+.btn-gray { background: var(--glass); color: var(--text); border-color: var(--glass-border); }
+.btn-gray:hover { background: var(--card-hover-bg); transform: translateY(-2px); }
+.btn-back { background: var(--glass); color: var(--muted); border-color: var(--glass-border); }
+.btn-back:hover { color: var(--accent); border-color: var(--card-hover-border); transform: translateY(-2px); }
+
+/* ── STATS BAR ── */
+.stats-bar { background: var(--section-alt); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); transition: background .35s; }
+.stats-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--glass-border); }
+.stat-item { background: var(--section-alt); padding: 22px 16px; text-align: center; transition: background .35s; }
+.stat-val { font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg,var(--accent),var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; }
+.stat-label { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+
+/* ── MAIN LAYOUT ── */
+.main-layout { max-width: 1100px; margin: 0 auto; padding: 48px 24px; display: grid; grid-template-columns: 1fr 310px; gap: 32px; align-items: start; }
+.content-col { display: flex; flex-direction: column; gap: 28px; }
+.sidebar { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── CARDS ── */
+.card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 28px; transition: all .25s; }
+.card:hover { background: var(--card-hover-bg); border-color: var(--card-hover-border); transform: translateY(-3px); }
+.card-title { font-size: 1rem; font-weight: 800; margin-bottom: 18px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.card-title i { color: var(--accent); font-size: .9rem; }
+.narrative { font-size: .92rem; color: var(--muted); margin-bottom: 10px; line-height: 1.7; }
+.narrative strong { color: var(--text); }
+
+/* ── PIPELINE ── */
+.pipeline { display: flex; align-items: stretch; gap: 0; margin: 20px 0; overflow-x: auto; padding-bottom: 4px; }
+.pipe-step { flex: 1; min-width: 120px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px; padding: 16px 10px; text-align: center; transition: .25s; }
+.pipe-step:hover { background: var(--card-hover-bg); border-color: var(--card-hover-border); transform: translateY(-3px); }
+.pipe-arrow { display: flex; align-items: center; justify-content: center; width: 28px; flex-shrink: 0; color: var(--muted); font-size: .8rem; padding-top: 10px; }
+.pipe-icon  { font-size: 1.8rem; margin-bottom: 8px; line-height: 1; }
+.pipe-label { font-size: .75rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.pipe-sub   { font-size: .7rem; color: var(--muted); line-height: 1.4; }
+
+/* ── MODULE GRID ── */
+.module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+.mod-card { border-radius: 12px; padding: 20px; border: 1px solid; transition: .25s; }
+.mod-card:hover { transform: translateY(-3px); }
+/* ▶ Add your own color classes here like .mod-1 { background: rgba(79,142,247,.05); border-color: rgba(79,142,247,.2); } */
+.mod-1 { background: rgba(79,142,247,.05);  border-color: rgba(79,142,247,.2); }
+.mod-2 { background: rgba(239,68,68,.05);   border-color: rgba(239,68,68,.18); }
+.mod-3 { background: rgba(245,158,11,.05);  border-color: rgba(245,158,11,.18); }
+.mod-4 { background: rgba(6,182,212,.05);   border-color: rgba(6,182,212,.18); }
+.mod-5 { background: rgba(167,139,250,.05); border-color: rgba(167,139,250,.2); }
+.mod-6 { background: rgba(34,197,94,.05);   border-color: rgba(34,197,94,.18); }
+.mod-badge { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; margin-bottom: 8px; }
+.mod-name  { font-size: .93rem; font-weight: 800; margin-bottom: 5px; color: var(--text); }
+.mod-desc  { font-size: .77rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+.mod-detail { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--glass-border); font-size: .77rem; }
+.mod-detail:last-child { border-bottom: none; }
+.mod-detail-key { color: var(--muted); }
+
+/* ── INSIGHT BANNER ── */
+.insight-banner { background: linear-gradient(135deg,rgba(79,142,247,.07),rgba(245,158,11,.07)); border: 1px solid rgba(79,142,247,.22); border-radius: var(--radius); padding: 22px; margin-top: 8px; display: flex; gap: 16px; align-items: flex-start; }
+.insight-icon { font-size: 2rem; flex-shrink: 0; }
+.insight-body h4 { font-size: .95rem; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+.insight-body p  { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+.insight-body strong { color: var(--accent); }
+
+/* ── ITEM STACK (reusable list of rows) ── */
+.item-stack { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.item-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; font-size: .82rem; transition: .2s; }
+.item-row:hover { background: var(--card-hover-bg); }
+.item-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+.item-name { color: var(--text); font-weight: 600; flex: 1; }
+.item-sub  { font-size: .72rem; color: var(--muted); }
+.item-tag  { font-size: .7rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; white-space: nowrap; }
+.tag-blue { background: rgba(79,142,247,.15); color: var(--accent); border: 1px solid rgba(79,142,247,.3); }
+.tag-red  { background: rgba(239,68,68,.15);  color: #f87171;       border: 1px solid rgba(239,68,68,.3); }
+.tag-green{ background: rgba(34,197,94,.15);  color: var(--green);  border: 1px solid rgba(34,197,94,.3); }
+.tag-gold { background: rgba(245,158,11,.15); color: var(--gold);   border: 1px solid rgba(245,158,11,.3); }
+
+/* ── DEMO / INTERACTIVE BLOCK ── */
+.demo-block { background: rgba(79,142,247,.04); border: 1px solid rgba(79,142,247,.15); border-radius: var(--radius); padding: 28px; }
+.demo-intro { font-size: .85rem; color: var(--muted); margin-bottom: 18px; font-style: italic; }
+.scenario-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.scen-btn { padding: 7px 16px; border-radius: 20px; font-size: .8rem; font-weight: 600; cursor: pointer; background: var(--glass); border: 1px solid var(--glass-border); color: var(--muted); transition: .2s; font-family: inherit; }
+.scen-btn.active, .scen-btn:hover { background: rgba(79,142,247,.15); border-color: rgba(79,142,247,.35); color: var(--accent); }
+.result-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.res-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px; padding: 14px; text-align: center; transition: .2s; }
+.res-card:hover { background: var(--card-hover-bg); transform: translateY(-2px); }
+.res-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.res-val   { font-size: 1.4rem; font-weight: 900; line-height: 1.1; }
+.res-sub   { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+.risk-bar-wrap { margin: 14px 0; }
+.risk-bar-label { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 5px; }
+.risk-bar-track { height: 10px; border-radius: 5px; background: var(--glass); overflow: hidden; }
+.risk-bar-fill  { height: 100%; border-radius: 5px; transition: width .7s ease; }
+.demo-note { font-size: .73rem; color: var(--muted); font-style: italic; margin-top: 14px; text-align: center; }
+
+/* ── CHART TABS ── */
+.chart-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.chart-tab  { padding: 7px 14px; border-radius: 20px; font-size: .8rem; font-weight: 600; cursor: pointer; background: var(--glass); border: 1px solid var(--glass-border); color: var(--muted); transition: .2s; }
+.chart-tab.active { background: rgba(79,142,247,.15); border-color: rgba(79,142,247,.35); color: var(--accent); }
+.chart-panel { display: none; }
+.chart-panel.active { display: block; }
+.chart-wrap  { position: relative; height: 280px; }
+.chart-caption { font-size: .8rem; color: var(--muted); margin-top: 10px; font-style: italic; text-align: center; }
+
+/* ── TAKEAWAYS / HIGHLIGHTS ── */
+.takeaway-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 8px; }
+.takeaway { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px; padding: 20px; text-align: center; transition: .2s; }
+.takeaway:hover { background: var(--card-hover-bg); transform: translateY(-3px); }
+.tk-icon  { font-size: 2rem; margin-bottom: 8px; }
+.tk-val   { font-size: 1.2rem; font-weight: 900; background: linear-gradient(135deg,var(--accent),var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; }
+.tk-label { font-size: .78rem; color: var(--muted); line-height: 1.45; }
+
+/* ── SIDEBAR ── */
+.sidebar-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 20px; }
+.sidebar-card h3 { font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 14px; }
+.tldr-text { font-size: .87rem; color: var(--muted); line-height: 1.7; }
+.tldr-text strong { color: var(--text); }
+.info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--glass-border); font-size: .82rem; gap: 8px; }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--muted); flex-shrink: 0; }
+.info-val { color: var(--text); font-weight: 600; text-align: right; font-size: .79rem; }
+.tech-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.tech-pill { background: rgba(79,142,247,.1); border: 1px solid rgba(79,142,247,.2); border-radius: 6px; padding: 3px 10px; font-size: .75rem; color: var(--accent); font-weight: 600; }
+[data-theme="light"] .tech-pill { background: rgba(37,99,235,.08); border-color: rgba(37,99,235,.2); }
+.sidebar-links { display: flex; flex-direction: column; gap: 8px; }
+.sidebar-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; font-size: .82rem; color: var(--muted); transition: .2s; text-decoration: none; }
+.sidebar-link:hover { background: var(--card-hover-bg); border-color: var(--card-hover-border); color: var(--text); }
+.sidebar-link i { color: var(--accent); width: 16px; text-align: center; }
+.hf-btn { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: linear-gradient(135deg,rgba(255,175,7,.12),rgba(255,175,7,.06)); border: 1px solid rgba(255,175,7,.3); border-radius: 10px; font-size: .85rem; font-weight: 700; color: #f59e0b; transition: .2s; text-decoration: none; }
+.hf-btn:hover { background: linear-gradient(135deg,rgba(255,175,7,.2),rgba(255,175,7,.1)); transform: translateY(-2px); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1000px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .module-grid { grid-template-columns: 1fr 1fr; }
+  .takeaway-grid { grid-template-columns: 1fr 1fr; }
+  .stats-inner { grid-template-columns: repeat(3,1fr); }
+  .result-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .hero { padding: 70px 16px 40px; }
+  .pipeline { flex-direction: column; }
+  .module-grid { grid-template-columns: 1fr; }
+  .takeaway-grid { grid-template-columns: 1fr; }
+  .stats-inner { grid-template-columns: repeat(2,1fr); }
+  .result-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- ═══════════════════════════════════════════
+     HERO SECTION
+     Replace all [PLACEHOLDER] text below.
+════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+
+    <!-- Breadcrumb navigation -->
+    <div class="breadcrumb">
+      <a href="/index.html"><i class="fas fa-home"></i> Home</a>
+      <span>›</span>
+      <a href="/projects/index.html">Projects</a>
+      <span>›</span>
+      <span style="color:var(--text)">[PROJECT NAME]</span>
+    </div>
+
+    <!-- Category pills: edit icon, text for each pill -->
+    <div class="tag-row">
+      <span class="pill pill-blue"><i class="fas fa-tag"></i> [DOMAIN / CATEGORY]</span>
+      <span class="pill pill-teal"><i class="fab fa-python"></i> [TECH STACK SUMMARY]</span>
+      <span class="pill pill-gold"><i class="fas fa-rocket"></i> [STATUS / PLATFORM]</span>
+    </div>
+
+    <!-- Main title: wrap gradient words in <span class="grad-text"> -->
+    <h1>[PROJECT NAME] — <span class="grad-text">[SUBTITLE OR TAGLINE]</span></h1>
+
+    <!-- One or two sentence description -->
+    <p class="hero-sub">
+      [BRIEF DESCRIPTION OF WHAT THE PROJECT IS AND WHAT IT DOES.]
+      <strong>[KEY CAPABILITY OR DIFFERENTIATOR.]</strong>
+    </p>
+
+    <!-- Meta info chips -->
+    <div class="hero-meta">
+      <span><i class="fas fa-calendar-alt"></i> [YEAR / DATE]</span>
+      <span><i class="fas fa-user"></i> <strong>[YOUR NAME]</strong></span>
+      <span><i class="fas fa-database"></i> [DATASET SIZE / TYPE]</span>
+      <span><i class="fas fa-brain"></i> [MODEL COUNT / TYPE]</span>
+    </div>
+
+    <!-- CTA buttons — update hrefs -->
+    <div class="hero-actions">
+      <a href="#demo" class="btn btn-blue"><i class="fas fa-play-circle"></i> Explore Demo</a>
+      <a href="https://huggingface.co/spaces/[YOUR-HF-USERNAME]/[SPACE-NAME]" target="_blank" class="btn btn-gold">
+        <i class="fas fa-external-link-alt"></i> Try on HuggingFace
+      </a>
+      <a href="https://github.com/[YOUR-GITHUB-USERNAME]/[REPO-NAME]" target="_blank" class="btn btn-gray">
+        <i class="fab fa-github"></i> View on GitHub
+      </a>
+      <a href="/projects/index.html" class="btn btn-back"><i class="fas fa-arrow-left"></i> All Projects</a>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     STATS BAR — 5 key numbers/facts
+════════════════════════════════════════════ -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <!-- Replace [VALUE] and [DESCRIPTION] for each stat -->
+    <div class="stat-item">
+      <div class="stat-val">[VALUE 1]</div>
+      <div class="stat-label">[Description of stat 1]</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">[VALUE 2]</div>
+      <div class="stat-label">[Description of stat 2]</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">[VALUE 3]</div>
+      <div class="stat-label">[Description of stat 3]</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">[VALUE 4]</div>
+      <div class="stat-label">[Description of stat 4]</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">[VALUE 5]</div>
+      <div class="stat-label">[Description of stat 5]</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     MAIN LAYOUT: content column + sidebar
+════════════════════════════════════════════ -->
+<div class="main-layout">
+<div class="content-col">
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 1: Architecture / Pipeline
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-blue">Architecture Overview</div>
+    <h2 class="card-title"><i class="fas fa-route"></i> [PIPELINE / ARCHITECTURE TITLE]</h2>
+
+    <!-- Narrative paragraph -->
+    <p class="narrative">
+      [Describe your system architecture and data flow here.
+      <strong>Highlight the key design decisions in bold.</strong>
+      Keep it 3–5 sentences.]
+    </p>
+
+    <!-- Pipeline steps — add/remove steps as needed -->
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon">🗄️</div>
+        <div class="pipe-label">[Step 1 Name]</div>
+        <div class="pipe-sub">[Brief description]</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🧠</div>
+        <div class="pipe-label">[Step 2 Name]</div>
+        <div class="pipe-sub">[Brief description]</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">📊</div>
+        <div class="pipe-label">[Step 3 Name]</div>
+        <div class="pipe-sub">[Brief description]</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🌐</div>
+        <div class="pipe-label">[Step 4 Name]</div>
+        <div class="pipe-sub">[Brief description]</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🚀</div>
+        <div class="pipe-label">[Step 5 Name]</div>
+        <div class="pipe-sub">[Brief description]</div>
+      </div>
+    </div>
+
+    <!-- Insight banner — a highlighted callout box -->
+    <div class="insight-banner">
+      <div class="insight-icon">💡</div>
+      <div class="insight-body">
+        <h4>[Callout / Insight Title]</h4>
+        <p>[Explain a key insight, design choice, or interesting fact about your architecture.
+           <strong>Highlight the most important part.</strong>]</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 2: Module / Feature Breakdown
+       6-card grid — remove cards if not needed
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-teal">Module Breakdown</div>
+    <h2 class="card-title"><i class="fas fa-layer-group"></i> [MODULES / FEATURES TITLE]</h2>
+
+    <div class="module-grid">
+
+      <!-- Module 1 -->
+      <div class="mod-card mod-1">
+        <div class="mod-badge" style="background:rgba(79,142,247,.12);color:var(--accent);border:1px solid rgba(79,142,247,.22)">
+          [EMOJI] [Badge Label]
+        </div>
+        <div class="mod-name">[Module 1 Name]</div>
+        <div class="mod-desc">[Short description of what this module does — 2 to 3 sentences.]</div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="color:var(--accent);font-weight:700">[Value]</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="font-weight:700">[Value]</span></div>
+      </div>
+
+      <!-- Module 2 -->
+      <div class="mod-card mod-2">
+        <div class="mod-badge" style="background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.22)">
+          [EMOJI] [Badge Label]
+        </div>
+        <div class="mod-name">[Module 2 Name]</div>
+        <div class="mod-desc">[Short description of what this module does — 2 to 3 sentences.]</div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="color:#f87171;font-weight:700">[Value]</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="font-weight:700">[Value]</span></div>
+      </div>
+
+      <!-- Module 3 -->
+      <div class="mod-card mod-3">
+        <div class="mod-badge" style="background:rgba(245,158,11,.12);color:var(--gold);border:1px solid rgba(245,158,11,.22)">
+          [EMOJI] [Badge Label]
+        </div>
+        <div class="mod-name">[Module 3 Name]</div>
+        <div class="mod-desc">[Short description of what this module does — 2 to 3 sentences.]</div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="color:var(--gold);font-weight:700">[Value]</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="font-weight:700">[Value]</span></div>
+      </div>
+
+      <!-- Module 4 -->
+      <div class="mod-card mod-4">
+        <div class="mod-badge" style="background:rgba(6,182,212,.12);color:var(--teal);border:1px solid rgba(6,182,212,.22)">
+          [EMOJI] [Badge Label]
+        </div>
+        <div class="mod-name">[Module 4 Name]</div>
+        <div class="mod-desc">[Short description of what this module does — 2 to 3 sentences.]</div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="color:var(--teal);font-weight:700">[Value]</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="font-weight:700">[Value]</span></div>
+      </div>
+
+      <!-- Module 5 -->
+      <div class="mod-card mod-5">
+        <div class="mod-badge" style="background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.22)">
+          [EMOJI] [Badge Label]
+        </div>
+        <div class="mod-name">[Module 5 Name]</div>
+        <div class="mod-desc">[Short description of what this module does — 2 to 3 sentences.]</div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="color:#a78bfa;font-weight:700">[Value]</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="font-weight:700">[Value]</span></div>
+      </div>
+
+      <!-- Module 6 -->
+      <div class="mod-card mod-6">
+        <div class="mod-badge" style="background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.22)">
+          [EMOJI] [Badge Label]
+        </div>
+        <div class="mod-name">[Module 6 Name]</div>
+        <div class="mod-desc">[Short description of what this module does — 2 to 3 sentences.]</div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="color:var(--green);font-weight:700">[Value]</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">[Key]</span><span style="font-weight:700">[Value]</span></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 3: Tech / Model Stack (row list)
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-blue">[Stack / Method Section Label]</div>
+    <h2 class="card-title"><i class="fas fa-brain"></i> [STACK / MODELS TITLE]</h2>
+    <p class="narrative">[Describe your models or technical stack in 2–3 sentences. <strong>Explain why these choices were made.</strong>]</p>
+
+    <div class="item-stack">
+
+      <!-- Item row 1 -->
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(79,142,247,.15);color:var(--accent)">
+          <i class="fas fa-cube"></i>
+        </div>
+        <div>
+          <div class="item-name">[Model / Component 1 Name]</div>
+          <div class="item-sub">[Features or details]</div>
+        </div>
+        <div class="item-tag tag-blue">[Tag label]</div>
+      </div>
+
+      <!-- Item row 2 -->
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(239,68,68,.15);color:#f87171">
+          <i class="fas fa-cube"></i>
+        </div>
+        <div>
+          <div class="item-name">[Model / Component 2 Name]</div>
+          <div class="item-sub">[Features or details]</div>
+        </div>
+        <div class="item-tag tag-red">[Tag label]</div>
+      </div>
+
+      <!-- Item row 3 -->
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(34,197,94,.15);color:var(--green)">
+          <i class="fas fa-cube"></i>
+        </div>
+        <div>
+          <div class="item-name">[Model / Component 3 Name]</div>
+          <div class="item-sub">[Features or details]</div>
+        </div>
+        <div class="item-tag tag-green">[Tag label]</div>
+      </div>
+
+      <!-- Item row 4 -->
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(245,158,11,.15);color:var(--gold)">
+          <i class="fas fa-cube"></i>
+        </div>
+        <div>
+          <div class="item-name">[Model / Component 4 Name]</div>
+          <div class="item-sub">[Features or details]</div>
+        </div>
+        <div class="item-tag tag-gold">[Tag label]</div>
+      </div>
+
+    </div>
+
+    <!-- Second insight banner -->
+    <div class="insight-banner" style="margin-top:16px">
+      <div class="insight-icon">⚙️</div>
+      <div class="insight-body">
+        <h4>[Second Callout Title]</h4>
+        <p>[Additional insight about your stack or methodology.
+           <strong>Highlight the most important part here.</strong>]</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 4: Interactive Demo
+       id="demo" is linked by the hero button
+  ──────────────────────────────────────────── -->
+  <div class="demo-block" id="demo">
+    <div class="s-tag s-tag-blue">Interactive Explorer</div>
+    <h2 class="card-title" style="margin-bottom:4px"><i class="fas fa-flask"></i> [DEMO SECTION TITLE]</h2>
+    <p class="demo-intro">[Brief intro sentence about what these tabs show — e.g. "Select a scenario to see representative outputs from the live model."]</p>
+
+    <!-- Tab buttons — update labels and onclick indices to match SCENARIOS array in JS -->
+    <div class="scenario-tabs" id="scenTabs">
+      <button class="scen-btn active" onclick="selectScen(0,this)">[Tab 1 Label]</button>
+      <button class="scen-btn"        onclick="selectScen(1,this)">[Tab 2 Label]</button>
+      <button class="scen-btn"        onclick="selectScen(2,this)">[Tab 3 Label]</button>
+      <button class="scen-btn"        onclick="selectScen(3,this)">[Tab 4 Label]</button>
+    </div>
+
+    <div id="scenOutput"></div>
+    <p class="demo-note">[Disclaimer note, e.g. "Illustrative outputs based on synthetic data. Live app scores in real time."]</p>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 5: Charts (tabbed)
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-blue">Performance Snapshot</div>
+    <h2 class="card-title"><i class="fas fa-chart-bar"></i> [CHARTS SECTION TITLE]</h2>
+
+    <!-- Tab labels — update to match your charts -->
+    <div class="chart-tabs">
+      <div class="chart-tab active" onclick="switchTab(0,this)">[Chart 1 Tab Label]</div>
+      <div class="chart-tab"        onclick="switchTab(1,this)">[Chart 2 Tab Label]</div>
+      <div class="chart-tab"        onclick="switchTab(2,this)">[Chart 3 Tab Label]</div>
+    </div>
+
+    <div class="chart-panel active" id="cp0">
+      <div class="chart-wrap"><canvas id="chart0"></canvas></div>
+      <p class="chart-caption">[Caption for chart 1 — explain what the data shows and what insight to take away.]</p>
+    </div>
+    <div class="chart-panel" id="cp1">
+      <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+      <p class="chart-caption">[Caption for chart 2.]</p>
+    </div>
+    <div class="chart-panel" id="cp2">
+      <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+      <p class="chart-caption">[Caption for chart 3.]</p>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 6: Key Design Decisions / Takeaways
+       3-column grid of highlight boxes
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-gold">Design Decisions</div>
+    <h2 class="card-title"><i class="fas fa-lightbulb"></i> [DECISIONS / HIGHLIGHTS TITLE]</h2>
+    <div class="takeaway-grid">
+
+      <div class="takeaway">
+        <div class="tk-icon">[EMOJI]</div>
+        <div class="tk-val">[Short headline]</div>
+        <div class="tk-label">[Explanation of this design choice — 2 to 3 sentences.]</div>
+      </div>
+
+      <div class="takeaway">
+        <div class="tk-icon">[EMOJI]</div>
+        <div class="tk-val">[Short headline]</div>
+        <div class="tk-label">[Explanation of this design choice — 2 to 3 sentences.]</div>
+      </div>
+
+      <div class="takeaway">
+        <div class="tk-icon">[EMOJI]</div>
+        <div class="tk-val">[Short headline]</div>
+        <div class="tk-label">[Explanation of this design choice — 2 to 3 sentences.]</div>
+      </div>
+
+    </div>
+  </div>
+
+
+</div><!-- /content-col -->
+
+
+<!-- ═══════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════ -->
+<div class="sidebar">
+
+  <!-- At-a-Glance summary -->
+  <div class="sidebar-card">
+    <h3>At a Glance</h3>
+    <p class="tldr-text">
+      <strong>What it is:</strong> [One sentence summary.]
+      <strong>Tech:</strong> [Key tools/frameworks.]
+      <strong>Deploy:</strong> [Where it runs.]
+      <strong>Scope:</strong> [What domains/features it covers.]
+    </p>
+  </div>
+
+  <!-- Live link button — update href -->
+  <div class="sidebar-card">
+    <h3>Try It Live</h3>
+    <a href="https://huggingface.co/spaces/[YOUR-HF-USERNAME]/[SPACE-NAME]" target="_blank" class="hf-btn">
+      <i class="fas fa-rocket"></i> Open on HuggingFace Spaces
+    </a>
+  </div>
+
+  <!-- Project metadata -->
+  <div class="sidebar-card">
+    <h3>Project Info</h3>
+    <div class="info-row"><span class="info-key">Status</span>     <span class="info-val" style="color:var(--accent)">[🔵 Live / 🟡 In Progress]</span></div>
+    <div class="info-row"><span class="info-key">Type</span>       <span class="info-val">[Academic / Industry / Personal]</span></div>
+    <div class="info-row"><span class="info-key">Domain</span>     <span class="info-val">[Field / Sector]</span></div>
+    <div class="info-row"><span class="info-key">Backend</span>    <span class="info-val">[Language · Framework]</span></div>
+    <div class="info-row"><span class="info-key">ML Models</span>  <span class="info-val">[Model names]</span></div>
+    <div class="info-row"><span class="info-key">Visualization</span><span class="info-val">[Library used]</span></div>
+    <div class="info-row"><span class="info-key">Records</span>    <span class="info-val">[Dataset size]</span></div>
+    <div class="info-row"><span class="info-key">Deploy target</span><span class="info-val">[Platform · Container · Port]</span></div>
+    <div class="info-row"><span class="info-key">Year</span>       <span class="info-val">[YEAR]</span></div>
+  </div>
+
+  <!-- Tech stack pills -->
+  <div class="sidebar-card">
+    <h3>Tech Stack</h3>
+    <div class="tech-pills">
+      <!-- Add or remove pills as needed -->
+      <span class="tech-pill">[Tech 1]</span>
+      <span class="tech-pill">[Tech 2]</span>
+      <span class="tech-pill">[Tech 3]</span>
+      <span class="tech-pill">[Tech 4]</span>
+      <span class="tech-pill">[Tech 5]</span>
+      <span class="tech-pill">[Tech 6]</span>
+    </div>
+  </div>
+
+  <!-- Module / Feature links — update hrefs and labels -->
+  <div class="sidebar-card">
+    <h3>[Modules / Features]</h3>
+    <div class="sidebar-links">
+      <a href="#" class="sidebar-link"><i class="fas fa-link"></i> [Feature / Page 1]</a>
+      <a href="#" class="sidebar-link"><i class="fas fa-link"></i> [Feature / Page 2]</a>
+      <a href="#" class="sidebar-link"><i class="fas fa-link"></i> [Feature / Page 3]</a>
+      <a href="#" class="sidebar-link"><i class="fas fa-link"></i> [Feature / Page 4]</a>
+      <a href="#" class="sidebar-link"><i class="fas fa-link"></i> [Feature / Page 5]</a>
+    </div>
+  </div>
+
+  <!-- Related links -->
+  <div class="sidebar-card">
+    <h3>Related Work</h3>
+    <div class="sidebar-links">
+      <a href="https://github.com/[YOUR-GITHUB-USERNAME]/[REPO-NAME]" target="_blank" class="sidebar-link">
+        <i class="fab fa-github"></i> GitHub Repository
+      </a>
+      <a href="/projects/[OTHER-PROJECT].html" class="sidebar-link"><i class="fas fa-link"></i> [Related Project 1]</a>
+      <a href="/projects/[OTHER-PROJECT].html" class="sidebar-link"><i class="fas fa-link"></i> [Related Project 2]</a>
+      <a href="/index.html#publications" class="sidebar-link"><i class="fas fa-book"></i> All Publications</a>
+      <a href="/projects/index.html" class="sidebar-link"><i class="fas fa-th-large"></i> Back to Projects</a>
+    </div>
+  </div>
+
+</div><!-- /sidebar -->
+</div><!-- /main-layout -->
+
+
+<!-- ═══════════════════════════════════════════
+     PAGE-SPECIFIC JAVASCRIPT
+     Edit SCENARIOS and chart data below.
+════════════════════════════════════════════ -->
+<script>
+
+/* ─── THEME HELPERS (don't need to change these) ─── */
+const html = document.documentElement;
+function isDark(){ return html.getAttribute('data-theme') !== 'light'; }
+function gc(){ return isDark() ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'; }
+function tc(){ return isDark() ? '#8892a4' : '#4b5675'; }
+function tt(){
+  return {
+    backgroundColor: isDark() ? 'rgba(7,13,31,.95)' : 'rgba(255,255,255,.97)',
+    titleColor:      isDark() ? '#e2e8f0' : '#0f172a',
+    bodyColor:       isDark() ? '#8892a4'  : '#4b5675',
+    borderColor:     isDark() ? 'rgba(79,142,247,.3)' : 'rgba(37,99,235,.2)',
+    borderWidth: 1
+  };
+}
+
+
+/* ─── SCENARIO DEMO DATA ───────────────────────────
+   Each object = one tab. Fill in your own values.
+   - title: shown above the metric cards
+   - metrics: array of 3 cards (label, value, sub-label, color)
+   - bar: a single progress bar (label, pct 0–100, color)
+   - insight: the text box below the bar
+─────────────────────────────────────────────────── */
+const SCENARIOS = [
+  {
+    title: '[EMOJI] [Scenario 1 Title]',
+    metrics: [
+      { label: '[Metric Label 1]', val: '[VALUE]', sub: '[Sub-label]', color: '#ef4444' },
+      { label: '[Metric Label 2]', val: '[VALUE]', sub: '[Sub-label]', color: '#f59e0b' },
+      { label: '[Metric Label 3]', val: '[VALUE]', sub: '[Sub-label]', color: '#4f8ef7' }
+    ],
+    bar: { label: '[Bar label]', pct: 50, color: '#ef4444' },
+    insight: '[Explanation of what the numbers mean for this scenario — 2 to 3 sentences.]'
+  },
+  {
+    title: '[EMOJI] [Scenario 2 Title]',
+    metrics: [
+      { label: '[Metric Label 1]', val: '[VALUE]', sub: '[Sub-label]', color: '#ef4444' },
+      { label: '[Metric Label 2]', val: '[VALUE]', sub: '[Sub-label]', color: '#f59e0b' },
+      { label: '[Metric Label 3]', val: '[VALUE]', sub: '[Sub-label]', color: '#4f8ef7' }
+    ],
+    bar: { label: '[Bar label]', pct: 30, color: '#f59e0b' },
+    insight: '[Explanation of what the numbers mean for this scenario — 2 to 3 sentences.]'
+  },
+  {
+    title: '[EMOJI] [Scenario 3 Title]',
+    metrics: [
+      { label: '[Metric Label 1]', val: '[VALUE]', sub: '[Sub-label]', color: '#4f8ef7' },
+      { label: '[Metric Label 2]', val: '[VALUE]', sub: '[Sub-label]', color: '#f59e0b' },
+      { label: '[Metric Label 3]', val: '[VALUE]', sub: '[Sub-label]', color: '#22c55e' }
+    ],
+    bar: { label: '[Bar label]', pct: 70, color: '#4f8ef7' },
+    insight: '[Explanation of what the numbers mean for this scenario — 2 to 3 sentences.]'
+  },
+  {
+    title: '[EMOJI] [Scenario 4 Title]',
+    metrics: [
+      { label: '[Metric Label 1]', val: '[VALUE]', sub: '[Sub-label]', color: '#ef4444' },
+      { label: '[Metric Label 2]', val: '[VALUE]', sub: '[Sub-label]', color: '#ef4444' },
+      { label: '[Metric Label 3]', val: '[VALUE]', sub: '[Sub-label]', color: '#f59e0b' }
+    ],
+    bar: { label: '[Bar label]', pct: 45, color: '#ef4444' },
+    insight: '[Explanation of what the numbers mean for this scenario — 2 to 3 sentences.]'
+  }
+];
+
+/* ─── SCENARIO RENDERER (no need to change) ─── */
+function renderScen(idx){
+  const s = SCENARIOS[idx];
+  const metrics = s.metrics.map(m => `
+    <div class="res-card">
+      <div class="res-label">${m.label}</div>
+      <div class="res-val" style="color:${m.color}">${m.val}</div>
+      <div class="res-sub">${m.sub}</div>
+    </div>`).join('');
+  document.getElementById('scenOutput').innerHTML = `
+    <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:12px">${s.title}</div>
+    <div class="result-grid">${metrics}</div>
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-label">
+        <span style="color:var(--muted);font-size:.78rem">${s.bar.label}</span>
+        <span style="color:${s.bar.color};font-weight:700;font-size:.82rem">${s.bar.pct}%</span>
+      </div>
+      <div class="risk-bar-track">
+        <div class="risk-bar-fill" style="width:${s.bar.pct}%;background:${s.bar.color}"></div>
+      </div>
+    </div>
+    <div style="background:rgba(79,142,247,.06);border:1px solid rgba(79,142,247,.15);border-radius:8px;padding:12px 16px;font-size:.82rem;color:var(--muted);line-height:1.65;margin-top:4px">${s.insight}</div>`;
+}
+function selectScen(idx, btn){
+  document.querySelectorAll('.scen-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderScen(idx);
+}
+renderScen(0);
+
+
+/* ─── CHART DATA ───────────────────────────────────
+   Edit the three buildChart(i) blocks below.
+   i=0 → Chart Tab 1, i=1 → Tab 2, i=2 → Tab 3
+   Chart.js docs: https://www.chartjs.org/docs/
+─────────────────────────────────────────────────── */
+const charts = {};
+
+function buildChart(i){
+  if(charts[i]) charts[i].destroy();
+  const ctx = document.getElementById('chart' + i);
+  if(!ctx) return;
+  const g = gc(), t = tc(), tip = tt();
+
+  if(i === 0){
+    /* ── CHART 1: Replace labels and data ── */
+    charts[0] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['[Label A]', '[Label B]', '[Label C]', '[Label D]', '[Label E]'],
+        datasets:[{
+          label: '[Dataset Name]',
+          data: [10, 25, 40, 60, 80], /* ← replace with your values */
+          backgroundColor: [
+            'rgba(248,81,73,.8)',
+            'rgba(210,153,34,.75)',
+            'rgba(88,166,255,.7)',
+            'rgba(63,185,80,.7)',
+            'rgba(0,176,255,.75)'
+          ],
+          borderRadius: 6
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:t}}, tooltip:tip },
+        scales:{
+          x:{ ticks:{color:t}, grid:{color:g} },
+          y:{ ticks:{color:t}, grid:{color:g}, title:{display:true, text:'[Y-Axis Label]', color:t, font:{size:11}} }
+        }
+      }
+    });
+
+  } else if(i === 1){
+    /* ── CHART 2: Replace labels and data ── */
+    charts[1] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['[Label A]', '[Label B]', '[Label C]', '[Label D]'],
+        datasets:[
+          {
+            label: '[Dataset 1]',
+            data: [20, 35, 50, 65], /* ← replace */
+            backgroundColor: isDark() ? 'rgba(248,81,73,.75)' : 'rgba(220,38,38,.7)',
+            borderRadius: 6
+          },
+          {
+            label: '[Dataset 2]',
+            data: [40, 30, 20, 15], /* ← replace */
+            backgroundColor: isDark() ? 'rgba(210,153,34,.6)' : 'rgba(217,119,6,.6)',
+            borderRadius: 6
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:t}}, tooltip:tip },
+        scales:{
+          x:{ ticks:{color:t}, grid:{color:g} },
+          y:{ ticks:{color:t}, grid:{color:g}, title:{display:true, text:'[Y-Axis Label]', color:t, font:{size:11}} }
+        }
+      }
+    });
+
+  } else if(i === 2){
+    /* ── CHART 3: Replace labels and data ── */
+    charts[2] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['[Label A]', '[Label B]', '[Label C]'],
+        datasets:[
+          {
+            label: '[Dataset 1]',
+            data: [0.8, 1.1, 1.3], /* ← replace */
+            backgroundColor: [
+              isDark()?'rgba(0,176,255,.7)':'rgba(37,99,235,.65)',
+              'rgba(210,153,34,.7)',
+              'rgba(248,81,73,.7)'
+            ],
+            borderRadius: 6
+          },
+          {
+            label: '[Dataset 2]',
+            data: [1.1, 1.4, 1.6], /* ← replace */
+            backgroundColor: ['rgba(136,146,164,.4)','rgba(136,146,164,.4)','rgba(136,146,164,.4)'],
+            borderRadius: 6
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:t}}, tooltip:tip },
+        scales:{
+          x:{ ticks:{color:t}, grid:{color:g} },
+          y:{ ticks:{color:t}, grid:{color:g}, title:{display:true, text:'[Y-Axis Label]', color:t, font:{size:11}} }
+        }
+      }
+    });
+  }
+}
+
+function switchTab(i, el){
+  document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.chart-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('cp' + i).classList.add('active');
+  buildChart(i);
+}
+
+buildChart(0); /* Build the first chart on page load */
+</script>
+
+</body>
+</html>

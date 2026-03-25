@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+{% set active_page = "automl" %}
+
+{% block title %}AutoML{% endblock %}
+{% block page_title %}<i class="fa-solid fa-wand-magic-sparkles" style="color:var(--accent)"></i> AutoML{% endblock %}
+
+{% block content %}
+<div class="page-title">AutoML Sweep</div>
+<div class="page-sub">Automatically benchmark every algorithm category against your dataset and rank by chosen metric</div>
+
+<div class="grid-2" style="align-items:start">
+
+  <!-- Config panel -->
+  <div class="card">
+    <div class="card-title" style="margin-bottom:16px"><i class="fa-solid fa-sliders" style="color:var(--accent)"></i> Configuration</div>
+
+    <div class="form-group">
+      <label class="form-label">Dataset</label>
+      <select class="form-select" id="aml-dataset" onchange="updateTaskFromDataset()">
+        {% for name, cfg in datasets.items() %}
+        <option value="{{ name }}" data-task="{{ cfg.task }}">{{ cfg.icon }} {{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Task Type</label>
+      <select class="form-select" id="aml-task" onchange="updateMetrics()">
+        <option value="classification">Classification</option>
+        <option value="regression">Regression</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Optimise Metric</label>
+      <select class="form-select" id="aml-metric">
+        <option value="accuracy">Accuracy</option>
+        <option value="f1_score">F1 Score</option>
+        <option value="precision">Precision</option>
+        <option value="recall">Recall</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Max Algorithms to Run</label>
+      <select class="form-select" id="aml-max-runs">
+        <option value="10">10 — Quick sweep</option>
+        <option value="20" selected>20 — Standard</option>
+        <option value="35">35 — Exhaustive</option>
+      </select>
+    </div>
+
+    <!-- Coverage preview -->
+    <div style="background:var(--bg-tertiary);border-radius:8px;padding:12px;margin-bottom:16px">
+      <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Algorithm Categories</div>
+      <div id="cat-pills" class="category-pills" style="margin-bottom:0"></div>
+    </div>
+
+    <!-- Progress -->
+    <div id="aml-progress-wrap" style="display:none;margin-bottom:14px">
+      <div class="flex-between" style="margin-bottom:6px">
+        <span style="font-size:.82rem;color:var(--text-secondary)" id="aml-status-text">Starting…</span>
+        <span style="font-size:.82rem;font-weight:600" id="aml-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="aml-bar" style="width:0%"></div></div>
+      <div id="aml-current-algo" style="font-size:.75rem;color:var(--text-muted);margin-top:4px"></div>
+    </div>
+
+    <button class="btn btn-primary" id="btn-aml-run" onclick="runAutoML()" style="width:100%">
+      <i class="fa-solid fa-wand-magic-sparkles"></i> Run AutoML Sweep
+    </button>
+  </div>
+
+  <!-- Results panel -->
+  <div style="display:flex;flex-direction:column;gap:16px">
+
+    <!-- Best model highlight -->
+    <div class="card" id="aml-best-card" style="display:none;border-color:var(--accent)">
+      <div class="card-title" style="margin-bottom:10px;color:var(--accent-light)">
+        <i class="fa-solid fa-trophy" style="color:var(--warning)"></i> Best Model
+      </div>
+      <div id="aml-best-content"></div>
+    </div>
+
+    <!-- Score chart -->
+    <div class="card" id="aml-chart-card" style="display:none">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-chart-bar" style="color:var(--accent-blue)"></i> Score Comparison</div>
+      </div>
+      <div id="aml-chart" style="height:260px"></div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title"><i class="fa-solid fa-ranking-star" style="color:var(--warning)"></i> Leaderboard</div>
+        <span id="aml-count" style="font-size:.8rem;color:var(--text-muted)"></span>
+      </div>
+      <div id="aml-leaderboard">
+        <div class="empty-state" style="padding:32px 16px">
+          <div class="empty-state-icon" style="font-size:2rem">🏁</div>
+          <div class="empty-state-title">No results yet</div>
+          <div>Configure and run the AutoML sweep to see rankings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ALGO_DATA_AML = {{ algorithms | tojson }};
+
+document.addEventListener('DOMContentLoaded', () => {
+  updateTaskFromDataset();
+});
+
+function updateTaskFromDataset() {
+  const ds  = document.getElementById('aml-dataset');
+  const opt = ds.options[ds.selectedIndex];
+  document.getElementById('aml-task').value = opt.dataset.task || 'classification';
+  updateMetrics();
+  updateCategoryPills();
+}
+
+function updateMetrics() {
+  const task = document.getElementById('aml-task').value;
+  const sel  = document.getElementById('aml-metric');
+  sel.innerHTML = task === 'classification'
+    ? `<option value="accuracy">Accuracy</option>
+       <option value="f1_score">F1 Score</option>
+       <option value="precision">Precision</option>
+       <option value="recall">Recall</option>`
+    : `<option value="r2_score">R² Score</option>
+       <option value="mae">MAE (lower = better)</option>
+       <option value="rmse">RMSE (lower = better)</option>`;
+  updateCategoryPills();
+}
+
+function updateCategoryPills() {
+  const task = document.getElementById('aml-task').value;
+  const cats = Object.keys(ALGO_DATA_AML[task] || {});
+  const el   = document.getElementById('cat-pills');
+  el.innerHTML = cats.map(c => `<span class="category-pill active">${c}</span>`).join('');
+}
+
+async function runAutoML() {
+  const dataset   = document.getElementById('aml-dataset').value;
+  const task_type = document.getElementById('aml-task').value;
+  const metric    = document.getElementById('aml-metric').value;
+  const max_runs  = parseInt(document.getElementById('aml-max-runs').value);
+
+  document.getElementById('btn-aml-run').disabled = true;
+  document.getElementById('btn-aml-run').innerHTML = '<span class="spinner"></span> Sweeping…';
+  document.getElementById('aml-progress-wrap').style.display = 'block';
+  document.getElementById('aml-best-card').style.display = 'none';
+  document.getElementById('aml-chart-card').style.display = 'none';
+  document.getElementById('aml-leaderboard').innerHTML =
+    '<div style="text-align:center;padding:20px;color:var(--text-muted)"><span class="spinner"></span> Running sweep…</div>';
+
+  try {
+    const res  = await fetch('/api/automl', {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ dataset, task_type, metric, max_runs }),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, 'error'); resetAML(); return; }
+    pollAutoML(data.job_id, metric);
+  } catch(e) { showToast('Failed to start AutoML', 'error'); resetAML(); }
+}
+
+function pollAutoML(jobId, metric) {
+  const bar     = document.getElementById('aml-bar');
+  const pct     = document.getElementById('aml-pct');
+  const statusT = document.getElementById('aml-status-text');
+  const curAlgo = document.getElementById('aml-current-algo');
+
+  const iv = setInterval(async () => {
+    const res = await fetch(`/api/automl/status/${jobId}`);
+    const job = await res.json();
+
+    bar.style.width = job.progress + '%';
+    pct.textContent = job.progress + '%';
+    statusT.textContent = job.status === 'running' ? 'Running sweep…' : job.status;
+    if (job.current_algo) curAlgo.textContent = `▶ ${job.current_algo}`;
+
+    const results = job.results || [];
+    if (results.length > 0) {
+      renderLeaderboard(results, metric);
+      document.getElementById('aml-count').textContent = `${results.length} models`;
+    }
+
+    if (job.status === 'completed') {
+      clearInterval(iv);
+      statusT.textContent = 'Completed';
+      curAlgo.textContent = '';
+      renderLeaderboard(results, metric);
+      if (job.best) renderBest(job.best, metric);
+      renderChart(results, metric);
+      document.getElementById('btn-aml-run').disabled = false;
+      document.getElementById('btn-aml-run').innerHTML = '<i class="fa-solid fa-rotate-right"></i> Re-run Sweep';
+      showToast(`AutoML complete — best: ${job.best?.algorithm} (${metric}: ${job.best?.metrics[metric]})`, 'success');
+    } else if (job.status === 'failed') {
+      clearInterval(iv);
+      showToast('AutoML failed: ' + (job.error || 'unknown'), 'error');
+      resetAML();
+    }
+  }, 1200);
+}
+
+function renderLeaderboard(results, metric) {
+  const el = document.getElementById('aml-leaderboard');
+  if (!results.length) return;
+  el.innerHTML = results.map(r => {
+    const rankClass = r.rank === 1 ? 'rank-1' : r.rank === 2 ? 'rank-2' : r.rank === 3 ? 'rank-3' : 'rank-n';
+    const v = r.metrics[metric];
+    const isGood = v >= 0.9;
+    const isMed  = v >= 0.7;
+    const metricClass = isGood ? 'metric-good' : isMed ? 'metric-medium' : 'metric-bad';
+    return `<div class="leaderboard-row">
+      <div class="rank-badge ${rankClass}">${r.rank}</div>
+      <div>
+        <div style="font-weight:500;font-size:.88rem">${r.algorithm}</div>
+        <div style="font-size:.75rem;color:var(--text-muted)">${r.category} · ${r.duration}s</div>
+      </div>
+      <span class="badge badge-purple" style="font-size:.72rem">${r.category.split(' ')[0]}</span>
+      <div class="metric-val ${metricClass}" style="min-width:52px;text-align:right">${typeof v === 'number' ? v.toFixed(4) : '—'}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderBest(best, metric) {
+  const card = document.getElementById('aml-best-card');
+  const v    = best.metrics[metric];
+  document.getElementById('aml-best-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:1.4rem;font-weight:700">${best.algorithm}</div>
+        <div style="font-size:.82rem;color:var(--text-secondary)">${best.category}</div>
+      </div>
+      <div style="margin-left:auto;text-align:right">
+        <div style="font-size:.75rem;color:var(--text-muted);text-transform:uppercase">${metric}</div>
+        <div style="font-size:2rem;font-weight:700;color:var(--success)">${typeof v === 'number' ? v.toFixed(4) : '—'}</div>
+      </div>
+    </div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      ${Object.entries(best.metrics).map(([k,val]) =>
+        `<div style="background:var(--bg-tertiary);padding:6px 12px;border-radius:6px;font-size:.82rem">
+          <span style="color:var(--text-muted)">${k}:</span>
+          <strong>${typeof val === 'number' ? val.toFixed(4) : val}</strong>
+        </div>`).join('')}
+    </div>`;
+  card.style.display = 'block';
+}
+
+function renderChart(results, metric) {
+  const top = results.slice(0, 15);
+  const bg2 = '#161b22', border = '#30363d', txt = '#8b949e';
+  const colors = top.map(r => r.color || '#8b5cf6');
+
+  Plotly.newPlot('aml-chart', [{
+    type: 'bar', orientation: 'h',
+    y: top.map(r => r.algorithm).reverse(),
+    x: top.map(r => r.metrics[metric] || 0).reverse(),
+    marker: { color: colors.slice().reverse() },
+    hovertemplate: '<b>%{y}</b><br>' + metric + ': %{x:.4f}<extra></extra>',
+  }], {
+    paper_bgcolor: bg2, plot_bgcolor: bg2,
+    margin: { t: 8, b: 40, l: 8, r: 16 },
+    xaxis: { gridcolor: border, color: txt, tickfont:{size:10} },
+    yaxis: { color: txt, tickfont:{size:10}, automargin: true },
+    bargap: .3,
+  }, { responsive: true, displayModeBar: false });
+
+  document.getElementById('aml-chart-card').style.display = 'block';
+}
+
+function resetAML() {
+  document.getElementById('btn-aml-run').disabled = false;
+  document.getElementById('btn-aml-run').innerHTML = '<i class="fa-solid fa-wand-magic-sparkles"></i> Run AutoML Sweep';
+}
+</script>
+{% endblock %}

@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% set active_page = "experiments" %}
+
+{% block title %}{{ experiment.name }} Runs{% endblock %}
+{% block page_title %}<i class="fa-solid fa-flask" style="color:var(--accent-blue)"></i> {{ experiment.name }}{% endblock %}
+
+{% block topnav_actions %}
+<button class="btn btn-ghost btn-sm" id="btn-compare" onclick="compareSelected()" disabled>
+  <i class="fa-solid fa-code-compare"></i> Compare Selected
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="flex-gap mb-20" style="margin-bottom:16px">
+  <a href="/experiments" class="btn btn-ghost btn-sm"><i class="fa-solid fa-arrow-left"></i> All Experiments</a>
+  <span class="badge badge-info">{{ runs | length }} runs</span>
+</div>
+
+<!-- Filter bar -->
+<div class="card card-sm mb-20" style="margin-bottom:16px">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <div style="font-size:.82rem;color:var(--text-muted);margin-right:4px"><i class="fa-solid fa-filter"></i> Filter:</div>
+    <select class="form-select" id="filter-task" style="width:auto;padding:5px 28px 5px 10px;font-size:.82rem" onchange="filterRuns()">
+      <option value="">All tasks</option>
+      <option value="classification">Classification</option>
+      <option value="regression">Regression</option>
+    </select>
+    <select class="form-select" id="filter-cat" style="width:auto;padding:5px 28px 5px 10px;font-size:.82rem" onchange="filterRuns()">
+      <option value="">All categories</option>
+      {% set cats = runs | map(attribute='category') | unique | list %}
+      {% for cat in cats %}<option value="{{ cat }}">{{ cat }}</option>{% endfor %}
+    </select>
+    <input type="text" class="form-control" id="filter-search" placeholder="Search algorithm…"
+           style="width:200px;padding:5px 10px;font-size:.82rem" oninput="filterRuns()">
+    <button class="btn btn-ghost btn-sm" onclick="clearFilters()"><i class="fa-solid fa-xmark"></i> Clear</button>
+  </div>
+</div>
+
+<!-- Runs table -->
+<div class="card">
+  <div class="table-wrap">
+    <table id="runs-table">
+      <thead>
+        <tr>
+          <th style="width:32px"><input type="checkbox" id="chk-all" onchange="toggleAll(this)"></th>
+          <th>Run ID</th><th>Algorithm</th><th>Category</th><th>Task</th>
+          {% if runs and runs[0].task_type == 'classification' %}
+          <th>Accuracy</th><th>F1</th><th>Precision</th><th>Recall</th>
+          {% else %}
+          <th>R²</th><th>MAE</th><th>RMSE</th>
+          {% endif %}
+          <th>Duration</th><th>Started</th>
+        </tr>
+      </thead>
+      <tbody id="runs-tbody">
+        {% for r in runs %}
+        <tr data-task="{{ r.task_type }}" data-cat="{{ r.category }}" data-alg="{{ r.algorithm | lower }}"
+            data-run="{{ r.run_id }}">
+          <td><input type="checkbox" class="run-chk" value="{{ r.run_id }}" onchange="updateCompareBtn()"></td>
+          <td><code style="font-size:.78rem;color:var(--accent-light)">{{ r.run_id_short }}</code></td>
+          <td><strong>{{ r.algorithm }}</strong></td>
+          <td><span class="badge badge-purple">{{ r.category }}</span></td>
+          <td><span class="badge {% if r.task_type == 'classification' %}badge-info{% else %}badge-warning{% endif %}">{{ r.task_type }}</span></td>
+          {% if r.task_type == 'classification' %}
+            {% set acc = r.metrics.get('accuracy', 0) %}
+            <td><span class="metric-val {% if acc >= 0.9 %}metric-good{% elif acc >= 0.7 %}metric-medium{% else %}metric-bad{% endif %}">{{ acc }}</span></td>
+            <td>{{ r.metrics.get('f1_score', '—') }}</td>
+            <td>{{ r.metrics.get('precision', '—') }}</td>
+            <td>{{ r.metrics.get('recall', '—') }}</td>
+          {% else %}
+            {% set r2 = r.metrics.get('r2_score', 0) %}
+            <td><span class="metric-val {% if r2 >= 0.8 %}metric-good{% elif r2 >= 0.5 %}metric-medium{% else %}metric-bad{% endif %}">{{ r2 }}</span></td>
+            <td>{{ r.metrics.get('mae', '—') }}</td>
+            <td>{{ r.metrics.get('rmse', '—') }}</td>
+          {% endif %}
+          <td>{{ r.duration }}s</td>
+          <td style="color:var(--text-muted);font-size:.8rem">{{ r.start_time }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="12">
+          <div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-title">No runs in this experiment</div></div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Compare Modal -->
+<div class="modal-overlay" id="compare-modal">
+  <div class="modal" style="width:min(820px,96vw)">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-code-compare" style="color:var(--accent)"></i> Run Comparison</div>
+      <button class="modal-close" onclick="document.getElementById('compare-modal').classList.remove('open')"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div id="compare-chart" style="height:320px"></div>
+    <div id="compare-table" style="margin-top:16px"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ALL_RUNS = {{ runs | tojson }};
+
+function filterRuns() {
+  const task   = document.getElementById('filter-task').value.toLowerCase();
+  const cat    = document.getElementById('filter-cat').value.toLowerCase();
+  const search = document.getElementById('filter-search').value.toLowerCase();
+  document.querySelectorAll('#runs-tbody tr[data-run]').forEach(row => {
+    const matchTask = !task   || row.dataset.task === task;
+    const matchCat  = !cat   || row.dataset.cat.toLowerCase() === cat;
+    const matchAlg  = !search || row.dataset.alg.includes(search);
+    row.style.display = (matchTask && matchCat && matchAlg) ? '' : 'none';
+  });
+}
+function clearFilters() {
+  document.getElementById('filter-task').value   = '';
+  document.getElementById('filter-cat').value    = '';
+  document.getElementById('filter-search').value = '';
+  filterRuns();
+}
+function toggleAll(cb) {
+  document.querySelectorAll('.run-chk').forEach(c => c.checked = cb.checked);
+  updateCompareBtn();
+}
+function updateCompareBtn() {
+  const count = document.querySelectorAll('.run-chk:checked').length;
+  document.getElementById('btn-compare').disabled = count < 2;
+}
+
+function compareSelected() {
+  const checked = [...document.querySelectorAll('.run-chk:checked')].map(c => c.value);
+  const selected = ALL_RUNS.filter(r => checked.includes(r.run_id));
+  if (selected.length < 2) return;
+
+  const isClass = selected[0].task_type === 'classification';
+  const metricKeys = isClass
+    ? ['accuracy','f1_score','precision','recall']
+    : ['r2_score','mae','mse','rmse'];
+
+  const colors = ['#8b5cf6','#3b82f6','#22c55e','#f59e0b','#ef4444','#06b6d4'];
+  const traces = metricKeys.map((mk, i) => ({
+    type: 'bar',
+    name: mk,
+    x: selected.map(r => r.algorithm),
+    y: selected.map(r => r.metrics[mk] || 0),
+    marker: { color: colors[i] },
+    hovertemplate: `<b>%{x}</b><br>${mk}: %{y:.4f}<extra></extra>`,
+  }));
+
+  const bg2 = '#161b22', border = '#30363d', txt = '#8b949e';
+  Plotly.newPlot('compare-chart', traces, {
+    paper_bgcolor: bg2, plot_bgcolor: bg2, barmode: 'group',
+    margin: { t:12, b:60, l:48, r:12 },
+    xaxis: { color: txt, tickfont:{size:10}, gridcolor: border },
+    yaxis: { color: txt, tickfont:{size:10}, gridcolor: border },
+    legend: { font:{color: txt, size:11}, bgcolor:'transparent' },
+  }, { responsive:true, displayModeBar:false });
+
+  // Table
+  let html = `<div class="table-wrap"><table><thead><tr><th>Algorithm</th><th>Dataset</th>`;
+  metricKeys.forEach(mk => html += `<th>${mk}</th>`);
+  html += '</tr></thead><tbody>';
+  selected.forEach(r => {
+    html += `<tr><td><strong>${r.algorithm}</strong></td><td>${r.dataset}</td>`;
+    metricKeys.forEach(mk => {
+      const v = r.metrics[mk];
+      html += `<td>${v !== undefined ? v : '—'}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  document.getElementById('compare-table').innerHTML = html;
+
+  document.getElementById('compare-modal').classList.add('open');
+}
+</script>
+{% endblock %}
