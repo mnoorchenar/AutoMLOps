@@ -1,9 +1,13 @@
 """Background model trainer with MLflow tracking."""
+import os
 import time
 import uuid
 import threading
 import numpy as np
 from datetime import datetime
+
+# Allow override via env var so Airflow tasks (different CWD) hit the same DB
+_MLFLOW_URI = os.environ.get("MLFLOW_TRACKING_URI", "sqlite:///mlflow.db")
 
 import mlflow
 import mlflow.sklearn
@@ -26,7 +30,7 @@ _lock = threading.Lock()
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
 def _get_or_create_experiment(name: str) -> str:
-    mlflow.set_tracking_uri("sqlite:///mlflow.db")
+    mlflow.set_tracking_uri(_MLFLOW_URI)
     exp = mlflow.get_experiment_by_name(name)
     if exp is None:
         return mlflow.create_experiment(name)
@@ -65,7 +69,7 @@ def _do_train(job_id: str, dataset_name: str, algorithm_name: str,
     start_time = time.time()
     try:
         _update_job(training_jobs, job_id, status="running", progress=5)
-        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+        mlflow.set_tracking_uri(_MLFLOW_URI)
 
         # 1. Load data
         X_train, X_test, y_train, y_test, meta = load_dataset(dataset_name)
@@ -176,7 +180,7 @@ def _do_automl(job_id: str, dataset_name: str, task_type: str,
     """Run every algorithm for the chosen task and log the best."""
     try:
         _update_job(automl_jobs, job_id, status="running", progress=2)
-        mlflow.set_tracking_uri("sqlite:///mlflow.db")
+        mlflow.set_tracking_uri(_MLFLOW_URI)
 
         X_train, X_test, y_train, y_test, meta = load_dataset(dataset_name)
         _update_job(automl_jobs, job_id, dataset_meta=meta, progress=5)
@@ -263,6 +267,50 @@ def _do_automl(job_id: str, dataset_name: str, task_type: str,
 
     except Exception as exc:
         _update_job(automl_jobs, job_id, status="failed", error=str(exc))
+
+
+def train_for_pipeline(dataset_name: str, task_type: str, category: str,
+                       algorithm: str, experiment_name: str = "pipeline") -> dict:
+    """
+    Synchronous training helper used by Airflow pipeline tasks.
+    Runs the full train/eval loop and returns a metrics dict.
+    Raises RuntimeError if training fails.
+    """
+    from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+    mlflow.set_tracking_uri(_MLFLOW_URI)
+    X_train, X_test, y_train, y_test, _ = load_dataset(dataset_name)
+    algo_cfg = get_algorithm(task_type, category, algorithm)
+    params   = algo_cfg["params"]
+
+    if "Naive Bayes" in algorithm or "Complement" in algorithm:
+        scaler = MinMaxScaler()
+    else:
+        scaler = StandardScaler()
+
+    X_tr = scaler.fit_transform(X_train)
+    X_te = scaler.transform(X_test)
+
+    exp_id = _get_or_create_experiment(experiment_name)
+    with mlflow.start_run(experiment_id=exp_id,
+                          run_name=f"{algorithm} — {dataset_name}") as run:
+        mlflow.set_tags({
+            "algorithm": algorithm, "category": category,
+            "dataset": dataset_name, "source": "airflow_pipeline",
+        })
+        mlflow.log_params({"algorithm": algorithm, "category": category,
+                           "dataset": dataset_name})
+        model = algo_cfg["class"](**params)
+        model.fit(X_tr, y_train)
+        y_pred = model.predict(X_te)
+        if task_type == "classification":
+            metrics = _classification_metrics(y_test, y_pred)
+        else:
+            metrics = _regression_metrics(y_test, y_pred)
+        mlflow.log_metrics(metrics)
+        mlflow.sklearn.log_model(model, "model")
+
+    return metrics
 
 
 def start_automl(dataset_name: str, task_type: str,

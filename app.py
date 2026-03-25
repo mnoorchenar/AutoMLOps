@@ -328,13 +328,24 @@ def api_runs():
 
 @app.route("/api/pipeline/<pipeline_id>/execute", methods=["POST"])
 def api_pipeline_execute(pipeline_id):
+    context = request.get_json(force=True) or {}
     try:
         dag = get_pipeline(pipeline_id)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-    ctx = request.get_json(force=True) or {}
-    exec_id = execute_dag(dag, ctx)
-    return jsonify({"exec_id": exec_id, "status": "queued"})
+
+    # Try Apache Airflow first; fall back to the built-in DAG engine if
+    # Airflow is not installed or not yet ready (e.g. first startup).
+    try:
+        from mlops.airflow_runner import trigger_pipeline, is_available
+        if is_available():
+            exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
+            return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
+    except Exception as af_err:
+        app.logger.warning(f"Airflow trigger failed ({af_err}), falling back to built-in engine")
+
+    exec_id = execute_dag(dag, context)
+    return jsonify({"exec_id": exec_id, "status": "queued", "engine": "builtin"})
 
 
 @app.route("/api/pipeline/status/<exec_id>")
