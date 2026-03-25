@@ -1,5 +1,8 @@
 FROM python:3.11-slim
 
+# Install system dependencies required by LightGBM (OpenMP runtime)
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+
 # HuggingFace Spaces requires non-root user with UID 1000
 RUN useradd -m -u 1000 user
 USER user
