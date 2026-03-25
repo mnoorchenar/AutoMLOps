@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}AutoMLOps{% endblock %} — ML Experiment Platform</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Plotly.js -->
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" defer></script>
+
+  <link rel="stylesheet" href="/static/css/style.css">
+
+  {% block head_extra %}{% endblock %}
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🤖</div>
+    <div>
+      <div class="sidebar-logo-text">AutoMLOps</div>
+      <div class="sidebar-logo-sub">ML Experiment Platform</div>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Overview</div>
+    <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+      <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span> Dashboard
+    </a>
+
+    <div class="nav-section-label">Experiments</div>
+    <a href="/experiments" class="nav-item {% if active_page == 'experiments' %}active{% endif %}">
+      <span class="nav-icon"><i class="fa-solid fa-flask"></i></span> Experiments
+    </a>
+    <a href="/automl" class="nav-item {% if active_page == 'automl' %}active{% endif %}">
+      <span class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span> AutoML
+      <span class="nav-badge">NEW</span>
+    </a>
+
+    <div class="nav-section-label">Operations</div>
+    <a href="/pipeline" class="nav-item {% if active_page == 'pipeline' %}active{% endif %}">
+      <span class="nav-icon"><i class="fa-solid fa-diagram-project"></i></span> Pipelines
+    </a>
+    <a href="/models" class="nav-item {% if active_page == 'models' %}active{% endif %}">
+      <span class="nav-icon"><i class="fa-solid fa-box-archive"></i></span> Model Registry
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div>Powered by <a href="https://mlflow.org" target="_blank">MLflow</a> &amp; sklearn</div>
+    <div class="mt-4" style="color: var(--text-muted); font-size:.72rem;">
+      <i class="fa-brands fa-python"></i> Python 3.11 &nbsp;·&nbsp;
+      <i class="fa-solid fa-code-branch"></i> v1.0
+    </div>
+  </div>
+</aside>
+
+<!-- ── Top navbar ────────────────────────────────────────────────────────── -->
+<header class="topnav">
+  <button class="btn btn-ghost btn-sm" id="sidebar-toggle" style="display:none"
+          onclick="document.getElementById('sidebar').classList.toggle('open')">
+    <i class="fa-solid fa-bars"></i>
+  </button>
+  <span class="topnav-title">{% block page_title %}AutoMLOps{% endblock %}</span>
+  <span class="topnav-badge"><i class="fa-solid fa-circle" style="color:#22c55e;font-size:.55rem"></i> Live</span>
+  {% block topnav_actions %}{% endblock %}
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<main class="main">
+  <div class="page-content">
+    {% block content %}{% endblock %}
+  </div>
+</main>
+
+<!-- ── Toast area ────────────────────────────────────────────────────────── -->
+<div id="toast-area"></div>
+
+<!-- ── Global JS ─────────────────────────────────────────────────────────── -->
+<script src="/static/js/app.js"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

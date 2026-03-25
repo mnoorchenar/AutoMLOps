@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% set active_page = "pipeline" %}
+
+{% block title %}Pipelines{% endblock %}
+{% block page_title %}<i class="fa-solid fa-diagram-project" style="color:var(--cyan)"></i> Pipelines{% endblock %}
+
+{% block content %}
+<div class="page-title">Pipeline Orchestration</div>
+<div class="page-sub">Airflow-style DAG visualisation and execution — click any pipeline to inspect and run</div>
+
+<!-- Pipeline selector tabs -->
+<div class="tab-bar" id="pipeline-tabs">
+  <button class="tab-btn active" onclick="switchPipeline('training_pipeline', this)">
+    <i class="fa-solid fa-brain"></i> Training Pipeline
+  </button>
+  <button class="tab-btn" onclick="switchPipeline('retraining_pipeline', this)">
+    <i class="fa-solid fa-rotate"></i> Retraining Pipeline
+  </button>
+  <button class="tab-btn" onclick="switchPipeline('data_pipeline', this)">
+    <i class="fa-solid fa-database"></i> Data Pipeline
+  </button>
+</div>
+
+<!-- Pipeline description + run button -->
+<div class="card mb-20" style="margin-bottom:16px">
+  <div class="flex-between">
+    <div>
+      <div class="card-title" id="pipeline-name" style="font-size:1rem;margin-bottom:4px">Training Pipeline</div>
+      <div id="pipeline-desc" style="font-size:.85rem;color:var(--text-secondary)">
+        End-to-end model training: ingest → preprocess → train → evaluate → register
+      </div>
+    </div>
+    <div class="flex-gap">
+      <!-- Context form for training pipeline -->
+      <div id="ctx-form" style="display:flex;gap:8px;flex-wrap:wrap">
+        <select class="form-select" id="ctx-dataset" style="width:auto;padding:6px 28px 6px 10px;font-size:.82rem">
+          {% for name in datasets %}<option>{{ name }}</option>{% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btn-run-pipeline" onclick="runPipeline()">
+        <i class="fa-solid fa-play"></i> Execute DAG
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- DAG canvas -->
+<div class="card mb-20" style="margin-bottom:16px">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-sitemap" style="color:var(--accent)"></i> DAG Graph</div>
+    <span id="exec-status-badge"></span>
+  </div>
+  <div id="dag-canvas" class="dag-canvas" style="height:320px"></div>
+</div>
+
+<!-- Execution state grid + log -->
+<div class="grid-2">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-list-check" style="color:var(--success)"></i> Task Status</div>
+      <div id="exec-progress-wrap" style="display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--text-muted)">
+        <span id="exec-pct">—</span>
+      </div>
+    </div>
+    <div id="task-list" style="display:flex;flex-direction:column;gap:6px"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-terminal" style="color:var(--warning)"></i> Execution Log</div>
+      <button class="btn btn-ghost btn-sm" onclick="clearLog()"><i class="fa-solid fa-trash"></i></button>
+    </div>
+    <div class="pipeline-log" id="exec-log">Waiting for execution…</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const DAGS = {{ dags | safe }};
+let currentPipeline = 'training_pipeline';
+let currentExecId   = null;
+let pollIv          = null;
+let currentDag      = null;
+
+const STATUS_COLORS = {
+  pending: '#30363d', running: '#f59e0b', success: '#22c55e', failed: '#ef4444',
+};
+const STATUS_ICONS = {
+  pending: '⏳', running: '⚡', success: '✅', failed: '❌',
+};
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  switchPipeline('training_pipeline',
+    document.querySelector('.tab-btn.active'));
+});
+
+function switchPipeline(id, btn) {
+  currentPipeline = id;
+  currentExecId   = null;
+  if (pollIv) { clearInterval(pollIv); pollIv = null; }
+
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  const dag = DAGS[id];
+  currentDag = dag;
+
+  document.getElementById('pipeline-name').textContent = dag.name;
+  document.getElementById('pipeline-desc').textContent = dag.description;
+
+  // Show dataset selector only for training pipeline
+  document.getElementById('ctx-form').style.display =
+    id === 'training_pipeline' ? 'flex' : 'none';
+
+  renderDAG(dag);
+  renderTaskList(dag, {});
+  document.getElementById('exec-log').textContent = 'Waiting for execution…';
+  document.getElementById('exec-status-badge').innerHTML = '';
+  document.getElementById('exec-pct').textContent = '—';
+  document.getElementById('btn-run-pipeline').disabled = false;
+  document.getElementById('btn-run-pipeline').innerHTML = '<i class="fa-solid fa-play"></i> Execute DAG';
+}
+
+// ── DAG rendering with Plotly ─────────────────────────────────────────────────
+function renderDAG(dag, taskStates) {
+  taskStates = taskStates || {};
+  const tasks   = Object.values(dag.tasks);
+  const layers  = {};
+  tasks.forEach(t => { layers[t.layer] = (layers[t.layer] || []); layers[t.layer].push(t); });
+
+  const nodeX = {}, nodeY = {};
+  const maxLayer = Math.max(...tasks.map(t => t.layer));
+  const xStep = 1 / (maxLayer + 1);
+
+  Object.entries(layers).forEach(([layer, ts]) => {
+    const xPos = (parseInt(layer) + 0.5) * xStep;
+    const yStep = 1 / (ts.length + 1);
+    ts.forEach((t, i) => {
+      nodeX[t.task_id] = xPos;
+      nodeY[t.task_id] = (i + 1) * yStep;
+    });
+  });
+
+  // Build edge traces
+  const edgeTraces = [];
+  tasks.forEach(t => {
+    t.upstream.forEach(upId => {
+      if (!nodeX[upId]) return;
+      edgeTraces.push({
+        type: 'scatter', mode: 'lines',
+        x: [nodeX[upId], nodeX[t.task_id]],
+        y: [nodeY[upId], nodeY[t.task_id]],
+        line: { color: '#30363d', width: 2 },
+        hoverinfo: 'none', showlegend: false,
+      });
+    });
+  });
+
+  // Node trace
+  const nodeColors = tasks.map(t => {
+    const st = (taskStates[t.task_id] || {}).status || 'pending';
+    return STATUS_COLORS[st] || '#30363d';
+  });
+  const nodeText = tasks.map(t => {
+    const st = (taskStates[t.task_id] || {}).status || 'pending';
+    return `${t.icon} ${t.name}<br><span style="font-size:10px">${STATUS_ICONS[st]} ${st}</span>`;
+  });
+  const nodeHover = tasks.map(t => {
+    const st = (taskStates[t.task_id] || {}).status || 'pending';
+    return `<b>${t.name}</b><br>${t.description}<br>Status: ${st}`;
+  });
+
+  const nodeTrace = {
+    type: 'scatter', mode: 'markers+text',
+    x: tasks.map(t => nodeX[t.task_id]),
+    y: tasks.map(t => nodeY[t.task_id]),
+    text: nodeText,
+    textposition: 'bottom center',
+    textfont: { color: '#e6edf3', size: 11 },
+    marker: {
+      size: 36,
+      color: nodeColors,
+      line: { color: '#e6edf3', width: 1.5 },
+      symbol: 'circle',
+    },
+    hovertemplate: nodeHover.map(h => h + '<extra></extra>'),
+    showlegend: false,
+  };
+
+  const bg = '#0d1117';
+  Plotly.react('dag-canvas', [...edgeTraces, nodeTrace], {
+    paper_bgcolor: bg, plot_bgcolor: bg,
+    margin: { t: 20, b: 40, l: 20, r: 20 },
+    xaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [0,1] },
+    yaxis: { showgrid: false, zeroline: false, showticklabels: false, range: [0,1] },
+    dragmode: false,
+  }, { responsive: true, displayModeBar: false });
+}
+
+// ── Task status list ──────────────────────────────────────────────────────────
+function renderTaskList(dag, taskStates) {
+  const tasks = Object.values(dag.tasks).sort((a,b) => a.layer - b.layer);
+  const el = document.getElementById('task-list');
+  el.innerHTML = tasks.map(t => {
+    const st  = (taskStates[t.task_id] || {}).status || 'pending';
+    const res = (taskStates[t.task_id] || {}).result || '';
+    const clr = STATUS_COLORS[st] || '#30363d';
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:6px;background:var(--bg-tertiary)">
+      <div style="width:10px;height:10px;border-radius:50%;background:${clr};margin-top:4px;flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:.85rem;font-weight:500">${t.icon} ${t.name}</div>
+        ${res ? `<div style="font-size:.75rem;color:var(--text-muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${res}">${res}</div>` : ''}
+      </div>
+      <span style="font-size:.72rem;padding:2px 7px;border-radius:10px;background:${clr}22;color:${clr};white-space:nowrap">${STATUS_ICONS[st]} ${st}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Execute pipeline ──────────────────────────────────────────────────────────
+async function runPipeline() {
+  document.getElementById('btn-run-pipeline').disabled = true;
+  document.getElementById('btn-run-pipeline').innerHTML = '<span class="spinner"></span> Running…';
+  document.getElementById('exec-log').textContent = '';
+  document.getElementById('exec-status-badge').innerHTML =
+    '<span class="badge badge-warning"><span class="spinner" style="width:9px;height:9px;border-width:1.5px"></span> Running</span>';
+
+  const ctx = {};
+  if (currentPipeline === 'training_pipeline') {
+    ctx.dataset = document.getElementById('ctx-dataset').value;
+  }
+
+  try {
+    const res  = await fetch(`/api/pipeline/${currentPipeline}/execute`, {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(ctx),
+    });
+    const data = await res.json();
+    currentExecId = data.exec_id;
+    pollExecution();
+  } catch(e) {
+    showToast('Failed to start pipeline', 'error');
+    document.getElementById('btn-run-pipeline').disabled = false;
+    document.getElementById('btn-run-pipeline').innerHTML = '<i class="fa-solid fa-play"></i> Execute DAG';
+  }
+}
+
+function pollExecution() {
+  if (pollIv) clearInterval(pollIv);
+  pollIv = setInterval(async () => {
+    const res  = await fetch(`/api/pipeline/status/${currentExecId}`);
+    const exec = await res.json();
+
+    // Update progress
+    document.getElementById('exec-pct').textContent = exec.progress + '%';
+
+    // Update log
+    const logEl = document.getElementById('exec-log');
+    logEl.innerHTML = (exec.logs || []).map(line => {
+      let cls = '';
+      if (line.includes('✔')) cls = 'log-line-ok';
+      else if (line.includes('✖')) cls = 'log-line-err';
+      else if (line.includes('▶')) cls = 'log-line-info';
+      return `<div class="${cls}">${line}</div>`;
+    }).join('');
+    logEl.scrollTop = logEl.scrollHeight;
+
+    // Update DAG
+    if (exec.task_states) {
+      renderDAG(currentDag, exec.task_states);
+      renderTaskList(currentDag, exec.task_states);
+    }
+
+    if (exec.status === 'completed') {
+      clearInterval(pollIv); pollIv = null;
+      document.getElementById('exec-status-badge').innerHTML =
+        '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Completed</span>';
+      document.getElementById('btn-run-pipeline').disabled = false;
+      document.getElementById('btn-run-pipeline').innerHTML = '<i class="fa-solid fa-rotate-right"></i> Run Again';
+      showToast(`Pipeline "${currentDag.name}" completed`, 'success');
+    } else if (exec.status === 'failed') {
+      clearInterval(pollIv); pollIv = null;
+      document.getElementById('exec-status-badge').innerHTML =
+        '<span class="badge badge-danger"><i class="fa-solid fa-xmark"></i> Failed</span>';
+      document.getElementById('btn-run-pipeline').disabled = false;
+      document.getElementById('btn-run-pipeline').innerHTML = '<i class="fa-solid fa-play"></i> Retry';
+      showToast('Pipeline failed: ' + (exec.error || 'unknown'), 'error');
+    }
+  }, 800);
+}
+
+function clearLog() { document.getElementById('exec-log').textContent = 'Cleared.'; }
+</script>
+{% endblock %}

@@ -1,7 +1,15 @@
-﻿__pycache__/
+__pycache__/
 *.pyc
+*.pyo
 .env
 .DS_Store
 *.log
 .vscode/
 *.tmp
+mlruns/
+mlflow.db
+logs/
+*.egg-info/
+dist/
+build/
+.pytest_cache/

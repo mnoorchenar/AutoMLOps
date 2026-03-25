@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}<i class="fa-solid fa-gauge-high" style="color:var(--accent)"></i> Dashboard{% endblock %}
+
+{% block topnav_actions %}
+<button class="btn btn-primary btn-sm" onclick="openTrainModal()">
+  <i class="fa-solid fa-play"></i> New Run
+</button>
+{% endblock %}
+
+{% block content %}
+<div class="page-title">Overview</div>
+<div class="page-sub">Real-time ML experiment tracking powered by MLflow</div>
+
+<!-- Stat cards -->
+<div class="stat-grid">
+  <div class="stat-card purple">
+    <div class="stat-label">Total Runs</div>
+    <div class="stat-value" id="stat-total">{{ total_runs }}</div>
+    <div class="stat-sub"><i class="fa-solid fa-arrow-trend-up"></i> all time</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-label">Completed</div>
+    <div class="stat-value" id="stat-completed">{{ completed_runs }}</div>
+    <div class="stat-sub">finished successfully</div>
+  </div>
+  <div class="stat-card green">
+    <div class="stat-label">Best Score</div>
+    <div class="stat-value" id="stat-best">{{ best_metric }}</div>
+    <div class="stat-sub">accuracy / R²</div>
+  </div>
+  <div class="stat-card yellow">
+    <div class="stat-label">Experiments</div>
+    <div class="stat-value" id="stat-exps">{{ n_experiments }}</div>
+    <div class="stat-sub">active datasets</div>
+  </div>
+</div>
+
+<!-- Charts row -->
+<div class="grid-2 mb-20">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-chart-pie" style="color:var(--accent)"></i> Algorithm Categories</div>
+    </div>
+    <div id="chart-algo" style="height:220px"></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title"><i class="fa-solid fa-database" style="color:var(--accent-blue)"></i> Runs by Dataset</div>
+    </div>
+    <div id="chart-ds" style="height:220px"></div>
+  </div>
+</div>
+
+<!-- Recent runs -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--warning)"></i> Recent Runs</div>
+    <a href="/experiments" class="btn btn-ghost btn-sm">View all <i class="fa-solid fa-arrow-right"></i></a>
+  </div>
+  <div class="table-wrap">
+    <table id="recent-table">
+      <thead>
+        <tr>
+          <th>Run ID</th><th>Algorithm</th><th>Category</th><th>Dataset</th>
+          <th>Primary Metric</th><th>Duration</th><th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in recent_runs %}
+        <tr>
+          <td><code style="font-size:.8rem;color:var(--accent-light)">{{ r.run_id }}</code></td>
+          <td><strong>{{ r.algorithm }}</strong></td>
+          <td><span class="badge badge-purple">{{ r.category }}</span></td>
+          <td>{{ r.dataset }}</td>
+          <td>
+            <span class="metric-val {% if r.primary_metric >= 0.9 %}metric-good{% elif r.primary_metric >= 0.7 %}metric-medium{% else %}metric-bad{% endif %}">
+              {{ r.primary_metric }}
+            </span>
+          </td>
+          <td>{{ r.duration }}s</td>
+          <td>
+            {% if r.status == 'FINISHED' %}
+              <span class="badge badge-success"><i class="fa-solid fa-check"></i> Done</span>
+            {% elif r.status == 'RUNNING' %}
+              <span class="badge badge-info"><span class="spinner" style="width:10px;height:10px;border-width:1.5px"></span> Running</span>
+            {% else %}
+              <span class="badge badge-muted">{{ r.status }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="7">
+          <div class="empty-state">
+            <div class="empty-state-icon">🔬</div>
+            <div class="empty-state-title">No runs yet</div>
+            <div>Click <strong>New Run</strong> to train your first model</div>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── Quick Train Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="train-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><i class="fa-solid fa-play" style="color:var(--accent)"></i> New Training Run</div>
+      <button class="modal-close" onclick="closeTrainModal()"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Dataset</label>
+      <select class="form-select" id="sel-dataset" onchange="updateTaskType()">
+        {% for name, cfg in datasets.items() %}
+        <option value="{{ name }}" data-task="{{ cfg.task }}">{{ cfg.icon }} {{ name }} — {{ cfg.description[:55] }}…</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Task Type</label>
+      <select class="form-select" id="sel-task" onchange="populateCategories()">
+        <option value="classification">Classification</option>
+        <option value="regression">Regression</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Algorithm Category</label>
+      <select class="form-select" id="sel-category" onchange="populateAlgorithms()"></select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Algorithm</label>
+      <select class="form-select" id="sel-algorithm"></select>
+    </div>
+
+    <!-- Progress (hidden until running) -->
+    <div id="train-progress-wrap" style="display:none;margin-top:12px">
+      <div class="flex-between mb-20" style="margin-bottom:6px">
+        <span style="font-size:.85rem;color:var(--text-secondary)" id="train-status-text">Initialising…</span>
+        <span style="font-size:.85rem;font-weight:600" id="train-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="train-bar" style="width:0%"></div></div>
+    </div>
+
+    <!-- Result (hidden until done) -->
+    <div id="train-result" style="display:none;margin-top:14px"></div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeTrainModal()">Cancel</button>
+      <button class="btn btn-primary" id="btn-start-train" onclick="startTraining()">
+        <i class="fa-solid fa-play"></i> Train
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const ALGO_DATA = {{ algorithms | tojson }};
+const ALGO_COUNTS = {{ algo_counts }};
+const DS_COUNTS   = {{ ds_counts }};
+
+// ── Charts ────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const dark = '#0d1117', bg2 = '#161b22', border = '#30363d', txt = '#8b949e';
+
+  // Donut — algorithm categories
+  const cats  = Object.keys(ALGO_COUNTS);
+  const vals  = Object.values(ALGO_COUNTS);
+  const COLORS = ['#8b5cf6','#3b82f6','#22c55e','#f59e0b','#ef4444','#06b6d4','#ec4899','#a855f7'];
+  Plotly.newPlot('chart-algo', [{
+    type: 'pie', hole: .55,
+    labels: cats, values: vals,
+    marker: { colors: COLORS.slice(0, cats.length) },
+    textinfo: 'none',
+    hovertemplate: '<b>%{label}</b><br>%{value} runs<extra></extra>',
+  }], {
+    paper_bgcolor: bg2, plot_bgcolor: bg2,
+    margin: { t:8, b:8, l:8, r:8 },
+    legend: { font: { color: txt, size: 11 }, bgcolor: 'transparent', x: 1.05 },
+    showlegend: cats.length > 0,
+    annotations: [{ text: `<b>${vals.reduce((a,b)=>a+b,0)}</b><br><span style="font-size:10px">runs</span>`,
+                    x:.5, y:.5, font:{size:14,color:'#e6edf3'}, showarrow:false }],
+  }, { responsive: true, displayModeBar: false });
+
+  // Bar — datasets
+  const dsKeys = Object.keys(DS_COUNTS);
+  const dsVals = Object.values(DS_COUNTS);
+  Plotly.newPlot('chart-ds', [{
+    type: 'bar', orientation: 'h',
+    y: dsKeys, x: dsVals,
+    marker: { color: '#3b82f6', opacity: .85 },
+    hovertemplate: '<b>%{y}</b>: %{x} runs<extra></extra>',
+  }], {
+    paper_bgcolor: bg2, plot_bgcolor: bg2,
+    margin: { t:8, b:24, l:8, r:16 },
+    xaxis: { gridcolor: border, color: txt, tickfont:{size:10} },
+    yaxis: { color: txt, tickfont:{size:10}, automargin:true },
+    bargap: .35,
+  }, { responsive: true, displayModeBar: false });
+
+  populateCategories();
+});
+
+// ── Train modal helpers ────────────────────────────────────────────────────
+function updateTaskType() {
+  const ds = document.getElementById('sel-dataset');
+  const opt = ds.options[ds.selectedIndex];
+  document.getElementById('sel-task').value = opt.dataset.task || 'classification';
+  populateCategories();
+}
+
+function populateCategories() {
+  const task = document.getElementById('sel-task').value;
+  const sel  = document.getElementById('sel-category');
+  sel.innerHTML = '';
+  const cats = Object.keys(ALGO_DATA[task] || {});
+  cats.forEach(c => { const o = document.createElement('option'); o.value = c; o.text = c; sel.add(o); });
+  populateAlgorithms();
+}
+
+function populateAlgorithms() {
+  const task = document.getElementById('sel-task').value;
+  const cat  = document.getElementById('sel-category').value;
+  const sel  = document.getElementById('sel-algorithm');
+  sel.innerHTML = '';
+  const algos = Object.keys((ALGO_DATA[task] || {})[cat] || {});
+  algos.forEach(a => { const o = document.createElement('option'); o.value = a; o.text = a; sel.add(o); });
+}
+
+function openTrainModal()  { document.getElementById('train-modal').classList.add('open'); resetTrainModal(); }
+function closeTrainModal() { document.getElementById('train-modal').classList.remove('open'); }
+
+function resetTrainModal() {
+  document.getElementById('train-progress-wrap').style.display = 'none';
+  document.getElementById('train-result').style.display = 'none';
+  document.getElementById('btn-start-train').disabled = false;
+  document.getElementById('btn-start-train').innerHTML = '<i class="fa-solid fa-play"></i> Train';
+}
+
+async function startTraining() {
+  const dataset   = document.getElementById('sel-dataset').value;
+  const task_type = document.getElementById('sel-task').value;
+  const category  = document.getElementById('sel-category').value;
+  const algorithm = document.getElementById('sel-algorithm').value;
+
+  document.getElementById('btn-start-train').disabled = true;
+  document.getElementById('btn-start-train').innerHTML = '<span class="spinner"></span> Running…';
+  document.getElementById('train-progress-wrap').style.display = 'block';
+  document.getElementById('train-result').style.display = 'none';
+
+  try {
+    const res  = await fetch('/api/train', {
+      method: 'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ dataset, task_type, category, algorithm }),
+    });
+    const data = await res.json();
+    if (data.error) { showToast(data.error, 'error'); resetTrainModal(); return; }
+    pollTraining(data.job_id);
+  } catch(e) { showToast('Request failed', 'error'); resetTrainModal(); }
+}
+
+function pollTraining(jobId) {
+  const bar     = document.getElementById('train-bar');
+  const pct     = document.getElementById('train-pct');
+  const statusT = document.getElementById('train-status-text');
+  const resultD = document.getElementById('train-result');
+
+  const iv = setInterval(async () => {
+    const res  = await fetch(`/api/run/${jobId}/status`);
+    const job  = await res.json();
+
+    bar.style.width = job.progress + '%';
+    pct.textContent = job.progress + '%';
+    statusT.textContent = job.status.charAt(0).toUpperCase() + job.status.slice(1) + '…';
+
+    if (job.status === 'completed') {
+      clearInterval(iv);
+      statusT.textContent = 'Completed';
+      const m = job.metrics || {};
+      const keys = Object.keys(m);
+      const primary = keys[0];
+      resultD.style.display = 'block';
+      resultD.innerHTML = `
+        <div style="background:var(--bg-tertiary);border-radius:8px;padding:14px">
+          <div style="font-weight:600;margin-bottom:10px;color:var(--success)">
+            <i class="fa-solid fa-circle-check"></i> Training complete
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px">
+            ${keys.map(k=>`<div style="background:var(--bg-secondary);padding:8px 10px;border-radius:6px">
+              <div style="font-size:.72rem;color:var(--text-muted);text-transform:uppercase">${k}</div>
+              <div style="font-size:1.1rem;font-weight:700;color:var(--success)">${m[k]}</div>
+            </div>`).join('')}
+          </div>
+        </div>`;
+      document.getElementById('btn-start-train').innerHTML = '<i class="fa-solid fa-rotate-right"></i> Run Again';
+      document.getElementById('btn-start-train').disabled = false;
+      showToast(`${job.algorithm} → ${primary}: ${m[primary]}`, 'success');
+      refreshStats();
+    } else if (job.status === 'failed') {
+      clearInterval(iv);
+      showToast('Training failed: ' + (job.error || 'unknown'), 'error');
+      resetTrainModal();
+    }
+  }, 1000);
+}
+
+async function refreshStats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('stat-total').textContent     = s.total_runs;
+    document.getElementById('stat-completed').textContent = s.completed_runs;
+    document.getElementById('stat-best').textContent      = s.best_metric;
+    document.getElementById('stat-exps').textContent      = s.n_experiments;
+  } catch(_) {}
+}
+</script>
+{% endblock %}

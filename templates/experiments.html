@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% set active_page = "experiments" %}
+
+{% block title %}Experiments{% endblock %}
+{% block page_title %}<i class="fa-solid fa-flask" style="color:var(--accent-blue)"></i> Experiments{% endblock %}
+
+{% block content %}
+<div class="page-title">Experiment Tracker</div>
+<div class="page-sub">Browse all MLflow experiments and compare runs side-by-side</div>
+
+{% if experiments %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+  {% for exp in experiments %}
+  <a href="/experiments/{{ exp.experiment_id }}" style="text-decoration:none">
+    <div class="card" style="cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border-color)'">
+      <div class="flex-between mb-20" style="margin-bottom:12px">
+        <div style="font-weight:600;font-size:.95rem">{{ exp.name }}</div>
+        <span class="badge badge-info">{{ exp.run_count }} runs</span>
+      </div>
+      <div style="display:flex;gap:20px;font-size:.85rem">
+        <div>
+          <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:2px">Best Score</div>
+          <div class="metric-val {% if exp.best_metric >= 0.9 %}metric-good{% elif exp.best_metric >= 0.7 %}metric-medium{% else %}metric-bad{% endif %}">
+            {{ exp.best_metric if exp.best_metric > 0 else '—' }}
+          </div>
+        </div>
+        <div>
+          <div style="color:var(--text-muted);font-size:.75rem;margin-bottom:2px">Created</div>
+          <div style="color:var(--text-secondary)">{{ exp.created_at }}</div>
+        </div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <div class="empty-state-icon">🔬</div>
+    <div class="empty-state-title">No experiments yet</div>
+    <div style="margin-bottom:16px">Start a training run from the Dashboard to create your first experiment.</div>
+    <a href="/" class="btn btn-primary"><i class="fa-solid fa-play"></i> Go to Dashboard</a>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

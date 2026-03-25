@@ -1,7 +1,22 @@
-﻿FROM python:3.11-slim
+FROM python:3.11-slim
+
+# HuggingFace Spaces requires non-root user with UID 1000
+RUN useradd -m -u 1000 user
+USER user
+ENV PATH="/home/user/.local/bin:$PATH"
+
 WORKDIR /app
-COPY requirements.txt .
+
+COPY --chown=user:user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
+
+COPY --chown=user:user . .
+
+RUN mkdir -p mlruns logs
+
 EXPOSE 7860
-CMD ["python", "app.py"]
+
+ENV PYTHONUNBUFFERED=1
+ENV FLASK_ENV=production
+
+CMD ["gunicorn", "--bind", "0.0.0.0:7860", "--workers", "1", "--threads", "4", "--timeout", "300", "--log-level", "info", "app:app"]
