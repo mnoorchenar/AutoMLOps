@@ -36,23 +36,11 @@
   </div>
 
   <nav class="sidebar-nav">
-    <div class="nav-section-label">Overview</div>
-    <a href="/" class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
-      <span class="nav-icon"><i class="fa-solid fa-gauge-high"></i></span> Dashboard
-    </a>
-
-    <div class="nav-section-label">Experiments</div>
-    <a href="/experiments" class="nav-item {% if active_page == 'experiments' %}active{% endif %}">
-      <span class="nav-icon"><i class="fa-solid fa-flask"></i></span> Experiments
+    <a href="/" class="nav-item {% if active_page == 'pipeline' %}active{% endif %}">
+      <span class="nav-icon"><i class="fa-solid fa-diagram-project"></i></span> Pipeline Studio
     </a>
     <a href="/automl" class="nav-item {% if active_page == 'automl' %}active{% endif %}">
       <span class="nav-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span> AutoML
-      <span class="nav-badge">NEW</span>
-    </a>
-
-    <div class="nav-section-label">Operations</div>
-    <a href="/pipeline" class="nav-item {% if active_page == 'pipeline' %}active{% endif %}">
-      <span class="nav-icon"><i class="fa-solid fa-diagram-project"></i></span> Pipeline Studio
     </a>
     <a href="/models" class="nav-item {% if active_page == 'models' %}active{% endif %}">
       <span class="nav-icon"><i class="fa-solid fa-box-archive"></i></span> Model Registry

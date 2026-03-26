@@ -6,10 +6,10 @@ from datetime import datetime
 
 import mlflow
 import mlflow.sklearn
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
 
-from mlops.datasets import DATASETS, load_dataset
-from mlops.algorithms import ALGORITHMS, list_algorithms, all_algorithm_names, algorithms_for_json
+from mlops.datasets import DATASETS
+from mlops.algorithms import algorithms_for_json
 from mlops.trainer import (
     training_jobs, automl_jobs,
     start_training, start_automl,
@@ -82,139 +82,26 @@ threading.Thread(target=_seed_demo, daemon=True).start()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  PAGE ROUTES
+#  PAGE ROUTES  (3 pages: Pipeline Studio · AutoML · Model Registry)
 # ══════════════════════════════════════════════════════════════════════════════
 
-@app.route("/")
-def dashboard():
-    client = _mlflow_client()
-    try:
-        runs = client.search_runs(
-            experiment_ids=[],
-            max_results=200,
-            order_by=["start_time DESC"],
-        )
-    except Exception:
-        runs = []
-
-    # Stats
-    total_runs   = len(runs)
-    completed    = [r for r in runs if r.info.status == "FINISHED"]
-    best_acc     = 0.0
-    for r in completed:
-        acc = r.data.metrics.get("accuracy") or r.data.metrics.get("r2_score") or 0
-        if acc > best_acc:
-            best_acc = acc
-
-    # Recent runs (last 8)
-    recent = []
-    for r in runs[:8]:
-        metrics = r.data.metrics
-        primary = (metrics.get("accuracy") or metrics.get("r2_score") or 0)
-        recent.append({
-            "run_id":    r.info.run_id[:8],
-            "algorithm": r.data.tags.get("algorithm", "—"),
-            "dataset":   r.data.tags.get("dataset",   "—"),
-            "category":  r.data.tags.get("category",  "—"),
-            "task_type": r.data.tags.get("task_type", "classification"),
-            "primary_metric": round(primary, 4),
-            "status":    r.info.status,
-            "duration":  round((r.info.end_time - r.info.start_time) / 1000, 1)
-                         if r.info.end_time else "—",
-        })
-
-    # Algorithm distribution
-    algo_counts: dict = {}
-    for r in completed:
-        cat = r.data.tags.get("category", "Other")
-        algo_counts[cat] = algo_counts.get(cat, 0) + 1
-
-    # Dataset distribution
-    ds_counts: dict = {}
-    for r in completed:
-        ds = r.data.tags.get("dataset", "Other")
-        ds_counts[ds] = ds_counts.get(ds, 0) + 1
-
-    return render_template("dashboard.html",
-                           total_runs=total_runs,
-                           completed_runs=len(completed),
-                           best_metric=round(best_acc, 4),
-                           n_experiments=len(set(r.info.experiment_id for r in runs)),
-                           recent_runs=recent,
-                           algo_counts=json.dumps(algo_counts),
-                           ds_counts=json.dumps(ds_counts),
-                           datasets=DATASETS,
-                           algorithms=algorithms_for_json())
-
-
-@app.route("/experiments")
-def experiments():
-    client = _mlflow_client()
-    try:
-        exps = client.search_experiments()
-    except Exception:
-        exps = []
-    exp_list = []
-    for e in exps:
-        runs = client.search_runs([e.experiment_id], max_results=100,
-                                  order_by=["start_time DESC"])
-        finished = [r for r in runs if r.info.status == "FINISHED"]
-        best = 0.0
-        for r in finished:
-            v = r.data.metrics.get("accuracy") or r.data.metrics.get("r2_score") or 0
-            if v > best:
-                best = v
-        exp_list.append({
-            "experiment_id": e.experiment_id,
-            "name":          e.name,
-            "run_count":     len(runs),
-            "best_metric":   round(best, 4),
-            "created_at":    datetime.fromtimestamp(e.creation_time / 1000).strftime("%Y-%m-%d %H:%M")
-                             if e.creation_time else "—",
-        })
-    return render_template("experiments.html", experiments=exp_list)
-
-
-@app.route("/experiments/<experiment_id>")
-def experiment_runs(experiment_id):
-    client = _mlflow_client()
-    exp    = client.get_experiment(experiment_id)
-    runs   = client.search_runs([experiment_id], max_results=200,
-                                order_by=["start_time DESC"])
-    run_list = []
-    for r in runs:
-        m = r.data.metrics
-        run_list.append({
-            "run_id":    r.info.run_id,
-            "run_id_short": r.info.run_id[:8],
-            "algorithm": r.data.tags.get("algorithm", "—"),
-            "category":  r.data.tags.get("category",  "—"),
-            "dataset":   r.data.tags.get("dataset",   "—"),
-            "task_type": r.data.tags.get("task_type", "classification"),
-            "metrics":   {k: round(v, 4) for k, v in m.items()},
-            "params":    r.data.params,
-            "status":    r.info.status,
-            "duration":  round((r.info.end_time - r.info.start_time) / 1000, 1)
-                         if r.info.end_time else None,
-            "start_time": datetime.fromtimestamp(r.info.start_time / 1000)
-                          .strftime("%Y-%m-%d %H:%M:%S")
-                          if r.info.start_time else "—",
-        })
-    return render_template("runs.html",
-                           experiment={"name": exp.name, "id": experiment_id},
-                           runs=run_list)
-
-
-@app.route("/pipeline")
-def pipeline():
-    dags = {}
-    for pid, builder in PIPELINE_BUILDERS.items():
-        dags[pid] = builder().to_dict()
-    # Strip non-serializable "loader" function before passing to template
+def _pipeline_context():
+    """Shared context for the Pipeline Studio page."""
+    dags = {pid: builder().to_dict() for pid, builder in PIPELINE_BUILDERS.items()}
     datasets_safe = {name: {k: v for k, v in cfg.items() if k != "loader"}
                      for name, cfg in DATASETS.items()}
-    return render_template("pipeline.html", dags=json.dumps(dags),
-                           datasets=datasets_safe)
+    return dict(dags=json.dumps(dags), datasets=datasets_safe)
+
+
+@app.route("/")
+def index():
+    return render_template("pipeline.html", **_pipeline_context())
+
+
+# Keep /pipeline working as a permanent redirect to /
+@app.route("/pipeline")
+def pipeline():
+    return redirect(url_for("index"), code=301)
 
 
 @app.route("/models")
@@ -337,15 +224,17 @@ def api_pipeline_execute(pipeline_id):
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    # Try Apache Airflow first; fall back to the built-in DAG engine if
-    # Airflow is not installed or not yet ready (e.g. first startup).
+    # Use Apache Airflow. Falls back to the built-in engine only if Airflow
+    # is not importable (i.e. not installed at all — should not happen in prod).
     try:
-        from mlops.airflow_runner import trigger_pipeline, is_available
-        if is_available():
-            exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
-            return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
+        from mlops.airflow_runner import trigger_pipeline
+        exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
+        return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
+    except ImportError:
+        app.logger.warning("Airflow not installed — using built-in DAG engine")
     except Exception as af_err:
-        app.logger.warning(f"Airflow trigger failed ({af_err}), falling back to built-in engine")
+        app.logger.error(f"Airflow trigger failed: {af_err}")
+        return jsonify({"error": f"Airflow error: {af_err}"}), 500
 
     exec_id = execute_dag(dag, context)
     return jsonify({"exec_id": exec_id, "status": "queued", "engine": "builtin"})
@@ -454,55 +343,6 @@ def api_datasets():
     return jsonify(result)
 
 
-@app.route("/api/stats")
-def api_stats():
-    client = _mlflow_client()
-    try:
-        runs = client.search_runs(
-            experiment_ids=[], max_results=500,
-            order_by=["start_time DESC"],
-        )
-    except Exception:
-        runs = []
-    finished = [r for r in runs if r.info.status == "FINISHED"]
-    best = 0.0
-    for r in finished:
-        v = r.data.metrics.get("accuracy") or r.data.metrics.get("r2_score") or 0
-        if v > best:
-            best = v
-
-    recent = []
-    for r in runs[:8]:
-        m = r.data.metrics
-        primary = m.get("accuracy") or m.get("r2_score") or 0
-        recent.append({
-            "run_id":         r.info.run_id[:8],
-            "algorithm":      r.data.tags.get("algorithm", "—"),
-            "category":       r.data.tags.get("category",  "—"),
-            "dataset":        r.data.tags.get("dataset",   "—"),
-            "primary_metric": round(primary, 4),
-            "status":         r.info.status,
-            "duration":       round((r.info.end_time - r.info.start_time) / 1000, 1)
-                              if r.info.end_time else None,
-        })
-
-    algo_counts: dict = {}
-    ds_counts:   dict = {}
-    for r in finished:
-        cat = r.data.tags.get("category", "Other")
-        algo_counts[cat] = algo_counts.get(cat, 0) + 1
-        ds = r.data.tags.get("dataset", "Other")
-        ds_counts[ds] = ds_counts.get(ds, 0) + 1
-
-    return jsonify({
-        "total_runs":     len(runs),
-        "completed_runs": len(finished),
-        "best_metric":    round(best, 4),
-        "n_experiments":  len(set(r.info.experiment_id for r in runs)),
-        "recent_runs":    recent,
-        "algo_counts":    algo_counts,
-        "ds_counts":      ds_counts,
-    })
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
