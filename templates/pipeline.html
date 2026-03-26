@@ -473,7 +473,7 @@ async function openConfig(taskId) {
     html += `
       <div class="cfg-sec">
         <label class="cfg-lbl" for="cfg-ds">Dataset</label>
-        <select class="cfg-select" id="cfg-ds" onchange="pCtx.dataset=this.value">
+        <select class="cfg-select" id="cfg-ds" onchange="onDatasetChange(this.value)">
           ${Object.keys(DATASETS).map(n=>`<option${n===pCtx.dataset?' selected':''}>${n}</option>`).join('')}
         </select>
       </div>`;
@@ -570,6 +570,16 @@ function _fillAlgos(cat) {
   const alg = algs.includes(pCtx.algorithm)?pCtx.algorithm:algs[0]||'';
   sel.value = alg; pCtx.algorithm = alg;
   sel.onchange = e => { pCtx.algorithm = e.target.value; };
+}
+
+function onDatasetChange(name) {
+  pCtx.dataset = name;
+  const dsTask = (DATASETS[name] || {}).task || 'classification';
+  if (dsTask !== pCtx.task_type) {
+    pCtx.task_type = dsTask;
+    pCtx.category  = '';
+    pCtx.algorithm = '';
+  }
 }
 
 async function onTtChange(tt) {
