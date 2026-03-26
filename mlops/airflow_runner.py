@@ -54,7 +54,6 @@ def _watch(exec_id: str, dag_id: str, run_id: str, task_ids: list[str], task_nam
         return
 
     seen_states: dict[str, str] = {tid: "pending" for tid in task_ids}
-    _waiting_logged = False
 
     for _attempt in range(900):   # max ~15 min of polling
         time.sleep(1.0)
@@ -83,16 +82,6 @@ def _watch(exec_id: str, dag_id: str, run_id: str, task_ids: list[str], task_nam
                 exec_st = pipeline_executions.get(exec_id)
                 if exec_st is None:
                     return
-
-                # Show a "waiting" message while the scheduler hasn't started yet
-                if not _waiting_logged and _attempt >= 3:
-                    all_pending = all(
-                        exec_st["task_states"].get(tid, {}).get("status") == "pending"
-                        for tid in task_ids
-                    )
-                    if all_pending:
-                        exec_st["logs"].append(f"[{now}] ⏳  Waiting for Airflow scheduler to pick up run…")
-                        _waiting_logged = True
 
                 for tid in task_ids:
                     ti    = tis.get(tid)
@@ -211,7 +200,7 @@ def trigger_pipeline(pipeline_id: str, context: dict | None = None, dag=None) ->
             "status":      "queued",
             "progress":    0,
             "task_states": task_states,
-            "logs": [f"[{now}] DAG '{dag_id}' triggered in Apache Airflow  (run_id={run_id})"],
+            "logs": [],
             "created_at":  datetime.utcnow().isoformat(),
         }
 

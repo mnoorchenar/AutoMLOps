@@ -659,13 +659,11 @@ async function runPipeline() {
   _setBadge('running');
   _showSteps(DAGS[cur]);
   _openTerm();
-  _addLog(`$ ${DAGS[cur].name}`, 'info');
 
   const ctx = {};
   if (cur === 'training_pipeline') {
     Object.assign(ctx, { dataset:pCtx.dataset, category:pCtx.category,
                           algorithm:pCtx.algorithm, task_type:pCtx.task_type });
-    _addLog(`  dataset="${ctx.dataset}"  algorithm="${ctx.algorithm}"`, 'dim');
   }
 
   try {
@@ -676,7 +674,6 @@ async function runPipeline() {
     const d = await r.json();
     if (d.error) { _execFailed(d.error); return; }
     execId = d.exec_id;
-    _addLog(`  engine=${d.engine||'builtin'}  id=${d.exec_id}`, 'dim');
     _poll();
   } catch(e) { _execFailed(e.message); }
 }
