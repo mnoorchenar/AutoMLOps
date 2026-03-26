@@ -34,15 +34,17 @@ def _feature_engineering(ctx, results):
 
 def _train_model(ctx, results):
     from mlops.datasets import load_dataset
-    from mlops.algorithms import get_algorithm
+    from mlops.algorithms import get_algorithm, get_hpo_grid
     from sklearn.preprocessing import StandardScaler
     import mlflow, mlflow.sklearn
 
-    log  = ctx.get("_log")
-    ds   = ctx.get("dataset", "Iris Flowers")
-    cat  = ctx.get("category", "Tree-Based")
-    alg  = ctx.get("algorithm", "Random Forest")
-    task = ctx.get("task_type", "classification")
+    log         = ctx.get("_log")
+    ds          = ctx.get("dataset",     "Iris Flowers")
+    cat         = ctx.get("category",    "Tree-Based")
+    alg         = ctx.get("algorithm",   "Random Forest")
+    task        = ctx.get("task_type",   "classification")
+    hpo_enabled = ctx.get("hpo_enabled", False)
+    hpo_trials  = max(5, int(ctx.get("hpo_trials", 20)))
 
     if log: log(f"Dataset: {ds}  ·  Algorithm: {alg} ({cat})")
     X_train, X_test, y_train, y_test, _ = load_dataset(ds)
@@ -50,13 +52,33 @@ def _train_model(ctx, results):
     X_tr = scaler.fit_transform(X_train)
     X_te = scaler.transform(X_test)
 
-    cfg   = get_algorithm(task, cat, alg)
-    model = cfg["class"](**cfg["params"])
-    if log: log(f"Fitting {alg} on {len(X_train)} training samples…")
-    model.fit(X_tr, y_train)
-    score = model.score(X_te, y_test)
-    if log: log(f"Evaluation complete · score = {score:.4f}")
-    return f"Model trained · score={score:.4f}"
+    cfg  = get_algorithm(task, cat, alg)
+    grid = get_hpo_grid(cfg["class"]) if hpo_enabled else {}
+
+    if hpo_enabled and grid:
+        from sklearn.model_selection import RandomizedSearchCV
+        if log: log(f"Hyperparameter search · {hpo_trials} trials · 3-fold CV…")
+        search = RandomizedSearchCV(
+            cfg["class"](**cfg["params"]), grid,
+            n_iter=hpo_trials, cv=3, n_jobs=-1,
+            random_state=42, refit=True,
+        )
+        search.fit(X_tr, y_train)
+        model = search.best_estimator_
+        best  = {k: v for k, v in search.best_params_.items()}
+        if log: log(f"Best params: {best}")
+        score = model.score(X_te, y_test)
+        if log: log(f"HPO complete · score = {score:.4f} (baseline without HPO may differ)")
+        return f"HPO score={score:.4f} · {best}"
+    else:
+        if hpo_enabled and not grid:
+            if log: log("No HPO grid defined for this algorithm — training with defaults")
+        model = cfg["class"](**cfg["params"])
+        if log: log(f"Fitting {alg} on {len(X_train)} training samples…")
+        model.fit(X_tr, y_train)
+        score = model.score(X_te, y_test)
+        if log: log(f"Evaluation complete · score = {score:.4f}")
+        return f"Model trained · score={score:.4f}"
 
 def _evaluate_model(ctx, results):
     log = ctx.get("_log")

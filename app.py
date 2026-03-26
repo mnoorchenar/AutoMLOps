@@ -236,15 +236,15 @@ def api_pipeline_execute(pipeline_id):
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    # Built-in engine is the default — zero scheduler latency, runs immediately.
-    # Set USE_AIRFLOW=true in the environment to hand off to Apache Airflow instead.
-    if os.environ.get("USE_AIRFLOW", "").lower() in ("1", "true"):
-        try:
-            from mlops.airflow_runner import trigger_pipeline
-            exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
-            return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
-        except Exception as af_err:
-            app.logger.warning(f"Airflow trigger failed, falling back to built-in engine: {af_err}")
+    # Apache Airflow is the primary engine; built-in DAG engine is the fallback.
+    try:
+        from mlops.airflow_runner import trigger_pipeline
+        exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
+        return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
+    except ImportError:
+        app.logger.warning("Airflow not installed — using built-in DAG engine")
+    except Exception as af_err:
+        app.logger.warning(f"Airflow trigger failed, using built-in engine: {af_err}")
 
     exec_id = execute_dag(dag, context)
     return jsonify({"exec_id": exec_id, "status": "queued", "engine": "builtin"})

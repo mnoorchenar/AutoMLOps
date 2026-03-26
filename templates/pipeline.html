@@ -175,6 +175,28 @@
 .cfg-row-k { color: var(--text-muted); white-space: nowrap; padding-right: 8px; }
 .cfg-row-v { color: var(--text-primary); font-weight: 500; text-align: right; word-break: break-word; max-width: 62%; font-size: .77rem; }
 
+/* ── HPO toggle ──────────────────────────────────────────────────────────── */
+.hpo-toggle { position:relative; display:inline-block; width:34px; height:19px; flex-shrink:0; }
+.hpo-toggle input { opacity:0; width:0; height:0; }
+.hpo-knob {
+  position:absolute; cursor:pointer; inset:0;
+  background:var(--bg-tertiary); border:1px solid var(--border-color);
+  border-radius:20px; transition:.18s;
+}
+.hpo-knob::before {
+  content:''; position:absolute;
+  width:13px; height:13px; left:2px; top:2px;
+  background:var(--text-muted); border-radius:50%; transition:.18s;
+}
+.hpo-toggle input:checked + .hpo-knob { background:rgba(139,92,246,.2); border-color:var(--accent); }
+.hpo-toggle input:checked + .hpo-knob::before { transform:translateX(15px); background:var(--accent); }
+.cfg-num {
+  width:64px; background:var(--bg-tertiary); border:1px solid var(--border-color);
+  color:var(--text-primary); border-radius:6px; padding:3px 7px;
+  font-size:.8rem; text-align:right; outline:none;
+}
+.cfg-num:focus { border-color:var(--accent); }
+
 /* ── Terminal ─────────────────────────────────────────────────────────────── */
 .ps-term {
   flex-shrink: 0; height: 34px; overflow: hidden;
@@ -302,10 +324,12 @@ let _seenLogs = 0;
 
 // Pipeline context — updated via config panel; used when running
 let pCtx = {
-  dataset:   Object.keys(DATASETS)[0] || 'Iris Flowers',
-  category:  'Tree-Based',
-  algorithm: 'Random Forest',
-  task_type: 'classification',
+  dataset:     Object.keys(DATASETS)[0] || 'Iris Flowers',
+  category:    'Tree-Based',
+  algorithm:   'Random Forest',
+  task_type:   'classification',
+  hpo_enabled: false,
+  hpo_trials:  20,
 };
 
 // Layout
@@ -493,6 +517,27 @@ async function openConfig(taskId) {
       <div class="cfg-sec">
         <label class="cfg-lbl" for="cfg-alg">Algorithm</label>
         <select class="cfg-select" id="cfg-alg" onchange="pCtx.algorithm=this.value"><option>Loading…</option></select>
+      </div>
+      <div class="cfg-sec">
+        <span class="cfg-lbl">Hyperparameter Search</span>
+        <div class="cfg-row">
+          <span class="cfg-row-k">Enable HPO</span>
+          <label class="hpo-toggle">
+            <input type="checkbox" id="cfg-hpo" onchange="onHpoToggle(this.checked)"${pCtx.hpo_enabled?' checked':''}>
+            <span class="hpo-knob"></span>
+          </label>
+        </div>
+        <div id="cfg-hpo-opts"${pCtx.hpo_enabled?'':' style="display:none"'}>
+          <div class="cfg-row">
+            <span class="cfg-row-k">Search trials</span>
+            <input type="number" class="cfg-num" id="cfg-trials" min="5" max="100" value="${pCtx.hpo_trials}"
+              onchange="pCtx.hpo_trials=Math.max(5,Math.min(100,+this.value))">
+          </div>
+          <div class="cfg-row">
+            <span class="cfg-row-k">CV folds</span>
+            <span class="cfg-row-v" style="color:var(--text-muted)">3</span>
+          </div>
+        </div>
       </div>`;
   }
 
@@ -582,6 +627,12 @@ function onDatasetChange(name) {
   }
 }
 
+function onHpoToggle(enabled) {
+  pCtx.hpo_enabled = enabled;
+  const el = document.getElementById('cfg-hpo-opts');
+  if (el) el.style.display = enabled ? '' : 'none';
+}
+
 async function onTtChange(tt) {
   pCtx.task_type = tt; pCtx.category=''; pCtx.algorithm='';
   await _loadAlgos(tt);
@@ -599,8 +650,14 @@ async function runPipeline() {
 
   const ctx = {};
   if (cur === 'training_pipeline') {
-    Object.assign(ctx, { dataset:pCtx.dataset, category:pCtx.category,
-                          algorithm:pCtx.algorithm, task_type:pCtx.task_type });
+    Object.assign(ctx, {
+      dataset:     pCtx.dataset,
+      category:    pCtx.category,
+      algorithm:   pCtx.algorithm,
+      task_type:   pCtx.task_type,
+      hpo_enabled: pCtx.hpo_enabled || false,
+      hpo_trials:  pCtx.hpo_trials  || 20,
+    });
   }
 
   try {

@@ -369,6 +369,49 @@ ALGORITHMS = {
 }
 
 
+# ── Hyperparameter search grids (keyed by model class name) ───────────────────
+HPO_GRIDS: dict[str, dict] = {
+    # Linear Models
+    "LogisticRegression":    {"C": [0.001, 0.01, 0.1, 1, 10, 100], "solver": ["lbfgs", "saga"], "max_iter": [500, 1000]},
+    "RidgeClassifier":       {"alpha": [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]},
+    "SGDClassifier":         {"loss": ["hinge", "log_loss", "modified_huber"], "alpha": [0.0001, 0.001, 0.01]},
+    "Ridge":                 {"alpha": [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]},
+    "Lasso":                 {"alpha": [0.001, 0.01, 0.1, 1.0, 10.0]},
+    "ElasticNet":            {"alpha": [0.001, 0.01, 0.1, 1.0], "l1_ratio": [0.1, 0.3, 0.5, 0.7, 0.9]},
+    "HuberRegressor":        {"epsilon": [1.1, 1.35, 1.5, 2.0], "alpha": [0.0001, 0.001, 0.01, 0.1]},
+    # Tree-Based
+    "DecisionTreeClassifier":{"max_depth": [3, 5, 7, 10, None], "min_samples_split": [2, 5, 10], "min_samples_leaf": [1, 2, 4], "criterion": ["gini", "entropy"]},
+    "DecisionTreeRegressor": {"max_depth": [3, 5, 7, 10, None], "min_samples_split": [2, 5, 10], "min_samples_leaf": [1, 2, 4]},
+    "RandomForestClassifier":{"n_estimators": [50, 100, 200, 300], "max_depth": [None, 5, 10, 20], "min_samples_split": [2, 5, 10], "max_features": ["sqrt", "log2"]},
+    "RandomForestRegressor": {"n_estimators": [50, 100, 200, 300], "max_depth": [None, 5, 10, 20], "min_samples_split": [2, 5, 10], "max_features": ["sqrt", "log2", None]},
+    "ExtraTreesClassifier":  {"n_estimators": [50, 100, 200], "max_depth": [None, 5, 10, 20], "min_samples_split": [2, 5, 10]},
+    "ExtraTreesRegressor":   {"n_estimators": [50, 100, 200], "max_depth": [None, 5, 10, 20], "min_samples_split": [2, 5, 10]},
+    # Boosting
+    "GradientBoostingClassifier": {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.05, 0.1, 0.2], "max_depth": [3, 4, 5, 6], "subsample": [0.7, 0.8, 0.9, 1.0]},
+    "GradientBoostingRegressor":  {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.05, 0.1, 0.2], "max_depth": [3, 4, 5, 6], "subsample": [0.7, 0.8, 0.9, 1.0]},
+    "AdaBoostClassifier":  {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.1, 0.5, 1.0]},
+    "AdaBoostRegressor":   {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.1, 0.5, 1.0], "loss": ["linear", "square", "exponential"]},
+    "XGBClassifier":  {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.05, 0.1, 0.2], "max_depth": [3, 4, 5, 6, 7], "subsample": [0.7, 0.8, 0.9], "colsample_bytree": [0.7, 0.8, 0.9]},
+    "XGBRegressor":   {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.05, 0.1, 0.2], "max_depth": [3, 4, 5, 6, 7], "subsample": [0.7, 0.8, 0.9], "colsample_bytree": [0.7, 0.8, 0.9]},
+    "LGBMClassifier": {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.05, 0.1, 0.2], "max_depth": [-1, 5, 10, 20], "num_leaves": [15, 31, 63, 127], "subsample": [0.7, 0.8, 0.9, 1.0]},
+    "LGBMRegressor":  {"n_estimators": [50, 100, 200], "learning_rate": [0.01, 0.05, 0.1, 0.2], "max_depth": [-1, 5, 10, 20], "num_leaves": [15, 31, 63, 127], "subsample": [0.7, 0.8, 0.9, 1.0]},
+    # SVM
+    "SVC": {"C": [0.1, 1, 10, 100], "gamma": ["scale", "auto", 0.001, 0.01, 0.1]},
+    "SVR": {"C": [0.1, 1, 10, 100], "gamma": ["scale", "auto"], "epsilon": [0.01, 0.1, 0.5, 1.0]},
+    # KNN
+    "KNeighborsClassifier": {"n_neighbors": [3, 5, 7, 9, 11, 15], "weights": ["uniform", "distance"], "metric": ["euclidean", "manhattan"]},
+    "KNeighborsRegressor":  {"n_neighbors": [3, 5, 7, 9, 11, 15], "weights": ["uniform", "distance"], "metric": ["euclidean", "manhattan"]},
+    # MLP
+    "MLPClassifier": {"hidden_layer_sizes": [(64,), (128,), (64, 32), (128, 64), (256, 128)], "learning_rate_init": [0.001, 0.005, 0.01], "alpha": [0.0001, 0.001, 0.01], "activation": ["relu", "tanh"]},
+    "MLPRegressor":  {"hidden_layer_sizes": [(64,), (128,), (64, 32), (128, 64), (256, 128)], "learning_rate_init": [0.001, 0.005, 0.01], "alpha": [0.0001, 0.001, 0.01], "activation": ["relu", "tanh"]},
+}
+
+
+def get_hpo_grid(cls) -> dict:
+    """Return the hyperparameter search grid for a model class, or {} if none defined."""
+    return HPO_GRIDS.get(cls.__name__, {})
+
+
 def get_algorithm(task: str, category: str, name: str) -> dict:
     """Retrieve algorithm config by task / category / name."""
     try:
