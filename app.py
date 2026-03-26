@@ -210,8 +210,11 @@ def pipeline():
     dags = {}
     for pid, builder in PIPELINE_BUILDERS.items():
         dags[pid] = builder().to_dict()
+    # Strip non-serializable "loader" function before passing to template
+    datasets_safe = {name: {k: v for k, v in cfg.items() if k != "loader"}
+                     for name, cfg in DATASETS.items()}
     return render_template("pipeline.html", dags=json.dumps(dags),
-                           datasets=DATASETS)
+                           datasets=datasets_safe)
 
 
 @app.route("/models")
