@@ -1,5 +1,4 @@
 """Pre-built ML pipeline DAG definitions."""
-import time
 import numpy as np
 from pipelines.dag_engine import DAG, Task
 
@@ -18,21 +17,18 @@ def _load_data(ctx, _results):
 def _validate_data(ctx, results):
     log = ctx.get("_log")
     if log: log("Checking schema, nulls, and feature ranges…")
-    time.sleep(0.2)
     if log: log("No nulls found · All feature ranges valid")
     return "Schema OK · No nulls detected · Feature ranges valid"
 
 def _preprocess(ctx, results):
     log = ctx.get("_log")
     if log: log("Fitting StandardScaler on training split…")
-    time.sleep(0.3)
     if log: log("80/20 stratified train/test split applied")
     return "StandardScaler fitted · Train/test split 80/20"
 
 def _feature_engineering(ctx, results):
     log = ctx.get("_log")
     if log: log("Evaluating polynomial and interaction features…")
-    time.sleep(0.2)
     if log: log("No additional features needed · all originals retained")
     return "Polynomial features skipped · All features retained"
 
@@ -65,79 +61,64 @@ def _train_model(ctx, results):
 def _evaluate_model(ctx, results):
     log = ctx.get("_log")
     if log: log("Computing accuracy / R² on hold-out set…")
-    time.sleep(0.2)
     if log: log("5-fold cross-validation passed")
     return "Accuracy / R² computed · Cross-val 5-fold done"
 
 def _generate_report(ctx, results):
     log = ctx.get("_log")
     if log: log("Writing evaluation artefacts to MLflow…")
-    time.sleep(0.15)
     return "HTML report generated · Metrics written to mlflow"
 
 def _register_model(ctx, _results):
     log = ctx.get("_log")
     if log: log("Pushing model artifact to MLflow Model Registry…")
-    time.sleep(0.1)
     return "Model artifact registered in MLflow Model Registry"
 
 def _deploy_staging(ctx, _results):
     log = ctx.get("_log")
     if log: log("Transitioning model version to Staging…")
-    time.sleep(0.2)
     if log: log("REST endpoint ready")
     return "Model transitioned to Staging · REST endpoint ready"
 
 # ── Retraining pipeline tasks ──────────────────────────────────────────────────
 
 def _check_drift(ctx, _):
-    time.sleep(0.2)
     drift = round(np.random.uniform(0.01, 0.08), 4)
     return f"PSI={drift} · {'Drift detected — retraining triggered' if drift > 0.05 else 'No drift · pipeline skipped'}"
 
 def _fetch_new_data(ctx, _):
-    time.sleep(0.3)
     n = np.random.randint(200, 800)
     return f"{n} new labelled samples fetched from data store"
 
 def _merge_datasets(ctx, _):
-    time.sleep(0.2)
     return "New data merged with historical · duplicates removed"
 
 def _retrain_champion(ctx, _):
-    time.sleep(0.4)
     acc = round(np.random.uniform(0.88, 0.97), 4)
     return f"Champion model retrained · new accuracy={acc}"
 
 def _ab_test(ctx, _):
-    time.sleep(0.2)
     return "A/B test scheduled · 10% traffic split for 24 h"
 
 def _promote_production(ctx, _):
-    time.sleep(0.15)
     return "Champion model promoted to Production · old version archived"
 
 # ── Data pipeline tasks ────────────────────────────────────────────────────────
 
 def _ingest_raw(ctx, _):
-    time.sleep(0.2)
     return "Raw data ingested from source"
 
 def _clean_data(ctx, _):
-    time.sleep(0.3)
     removed = np.random.randint(5, 40)
     return f"{removed} anomalous rows removed · missing values imputed"
 
 def _encode_features(ctx, _):
-    time.sleep(0.2)
     return "Categorical features one-hot encoded · ordinals label-encoded"
 
 def _scale_features(ctx, _):
-    time.sleep(0.2)
     return "Numeric features scaled with StandardScaler"
 
 def _save_processed(ctx, _):
-    time.sleep(0.1)
     return "Processed dataset saved to feature store"
 
 

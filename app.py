@@ -30,6 +30,17 @@ def _mlflow_client():
 
 # ── Seed demo data on first launch ────────────────────────────────────────────
 
+def _warm_imports():
+    """Pre-import heavy ML libraries so the first pipeline run is instant."""
+    try:
+        import sklearn, sklearn.ensemble, sklearn.preprocessing  # noqa: F401
+        import mlflow, mlflow.sklearn                            # noqa: F401
+        from mlops.datasets import load_dataset
+        load_dataset("Iris Flowers")   # primes sklearn's data cache
+    except Exception:
+        pass
+
+
 def _seed_demo():
     """Pre-populate a few MLflow runs so the dashboard looks great immediately."""
     client = _mlflow_client()
@@ -77,7 +88,8 @@ def _seed_demo():
             pass
 
 
-# Seed in background so startup isn't delayed
+# Warm imports and seed demo data in background so startup isn't delayed
+threading.Thread(target=_warm_imports, daemon=True).start()
 threading.Thread(target=_seed_demo, daemon=True).start()
 
 
@@ -224,16 +236,15 @@ def api_pipeline_execute(pipeline_id):
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    # Use Apache Airflow. Falls back to the built-in engine only if Airflow
-    # is not importable (i.e. not installed at all — should not happen in prod).
-    try:
-        from mlops.airflow_runner import trigger_pipeline
-        exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
-        return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
-    except ImportError:
-        app.logger.warning("Airflow not installed — using built-in DAG engine")
-    except Exception as af_err:
-        app.logger.warning(f"Airflow trigger failed, falling back to built-in engine: {af_err}")
+    # Built-in engine is the default — zero scheduler latency, runs immediately.
+    # Set USE_AIRFLOW=true in the environment to hand off to Apache Airflow instead.
+    if os.environ.get("USE_AIRFLOW", "").lower() in ("1", "true"):
+        try:
+            from mlops.airflow_runner import trigger_pipeline
+            exec_id = trigger_pipeline(pipeline_id, context=context, dag=dag)
+            return jsonify({"exec_id": exec_id, "status": "queued", "engine": "airflow"})
+        except Exception as af_err:
+            app.logger.warning(f"Airflow trigger failed, falling back to built-in engine: {af_err}")
 
     exec_id = execute_dag(dag, context)
     return jsonify({"exec_id": exec_id, "status": "queued", "engine": "builtin"})

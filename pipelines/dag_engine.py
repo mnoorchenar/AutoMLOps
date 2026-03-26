@@ -141,7 +141,7 @@ def _run_dag(exec_id: str, dag: DAG, context: dict):
             progress = int(100 * (step_idx + 1) / total)
             _upd(progress=progress)
 
-            time.sleep(0.4)   # small delay so the UI can animate
+            time.sleep(0.1)   # small delay so the UI can animate
 
         _upd(status="completed", progress=100,
              completed_at=datetime.utcnow().isoformat())

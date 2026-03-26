@@ -175,42 +175,6 @@
 .cfg-row-k { color: var(--text-muted); white-space: nowrap; padding-right: 8px; }
 .cfg-row-v { color: var(--text-primary); font-weight: 500; text-align: right; word-break: break-word; max-width: 62%; font-size: .77rem; }
 
-/* ── Steps progress bar ───────────────────────────────────────────────────── */
-.ps-steps {
-  flex-shrink: 0; display: none;
-  padding: 5px 16px; min-height: 38px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  overflow-x: auto; align-items: center; gap: 4px;
-  scrollbar-width: none;
-}
-.ps-steps::-webkit-scrollbar { display: none; }
-.ps-steps.visible { display: flex; }
-
-.step-pill {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 3px 9px; border-radius: 20px; flex-shrink: 0;
-  font-size: .7rem; font-weight: 500; white-space: nowrap;
-  border: 1px solid var(--border-color);
-  background: var(--bg-tertiary); color: var(--text-secondary);
-  transition: background .2s, border-color .2s, color .2s;
-}
-.step-pill.s-running {
-  border-color: var(--warning); background: rgba(245,158,11,.12); color: var(--warning);
-  animation: pill-pulse 1.4s ease-in-out infinite;
-}
-.step-pill.s-success {
-  border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.08); color: var(--success);
-}
-.step-pill.s-failed {
-  border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); color: var(--danger);
-}
-.step-sep { color: var(--border-color); font-size: .65rem; flex-shrink: 0; user-select: none; }
-@keyframes pill-pulse {
-  0%,100% { box-shadow: none; }
-  50%      { box-shadow: 0 0 0 3px rgba(245,158,11,.15); }
-}
-
 /* ── Terminal ─────────────────────────────────────────────────────────────── */
 .ps-term {
   flex-shrink: 0; height: 34px; overflow: hidden;
@@ -274,9 +238,6 @@
       <span id="ps-btn-txt">Execute DAG</span>
     </button>
   </div>
-
-  <!-- ── Steps progress bar ────────────────────────────────────────────── -->
-  <div class="ps-steps" id="ps-steps"></div>
 
   <!-- ── Main area ──────────────────────────────────────────────────────── -->
   <div class="ps-main">
@@ -364,7 +325,6 @@ document.addEventListener('DOMContentLoaded', () =>
 function switchPipeline(id, btn) {
   if (pollIv) { clearInterval(pollIv); pollIv = null; }
   cur = id; execId = null; tstates = {}; selNode = null;
-  _hideSteps();
   closeConfig(false);
   document.querySelectorAll('.ps-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
@@ -618,38 +578,6 @@ async function onTtChange(tt) {
 }
 function onCatChange(cat) { pCtx.category=cat; _fillAlgos(cat); }
 
-// ── Steps bar ─────────────────────────────────────────────────────────────────
-function _stepsOrder(dag) {
-  return Object.values(dag.tasks)
-    .sort((a, b) => a.layer !== b.layer ? a.layer - b.layer : a.task_id.localeCompare(b.task_id));
-}
-
-function _renderSteps(dag, tstates) {
-  const el = document.getElementById('ps-steps');
-  el.innerHTML = '';
-  _stepsOrder(dag).forEach((t, i) => {
-    if (i > 0) {
-      const sep = document.createElement('span');
-      sep.className = 'step-sep'; sep.textContent = '›';
-      el.appendChild(sep);
-    }
-    const st = (tstates[t.task_id] || {}).status || 'pending';
-    const pill = document.createElement('div');
-    pill.className = `step-pill s-${st}`;
-    pill.textContent = `${t.icon} ${t.name}`;
-    el.appendChild(pill);
-  });
-}
-
-function _showSteps(dag) {
-  _renderSteps(dag, {});
-  document.getElementById('ps-steps').classList.add('visible');
-}
-
-function _hideSteps() {
-  document.getElementById('ps-steps').classList.remove('visible');
-}
-
 // ── Execute pipeline ──────────────────────────────────────────────────────────
 async function runPipeline() {
   const runBtn = document.getElementById('ps-run-btn');
@@ -657,7 +585,6 @@ async function runPipeline() {
   document.getElementById('ps-btn-icon').className = 'spinner';
   document.getElementById('ps-btn-txt').textContent = 'Running…';
   _setBadge('running');
-  _showSteps(DAGS[cur]);
   _openTerm();
 
   const ctx = {};
@@ -703,7 +630,6 @@ function _poll() {
 
       document.getElementById('term-pct').textContent = exec.progress!=null?exec.progress+'%':'';
       renderDAG(DAGS[cur], tstates);
-      _renderSteps(DAGS[cur], tstates);
       _updateCfgStatus();
 
       if (exec.status==='completed') {
