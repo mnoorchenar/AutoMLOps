@@ -46,8 +46,8 @@ RUN pip install --no-cache-dir \
 # ── Application code ──────────────────────────────────────────────────────────
 COPY --chown=user . .
 
-# Create directories needed at runtime
-RUN mkdir -p mlruns logs /home/user/airflow/logs
+# Create directories needed at runtime and ensure start.sh is executable
+RUN mkdir -p mlruns logs /home/user/airflow/logs && chmod +x /app/start.sh
 
 # Initialise Airflow metadata DB (SQLite — no external DB needed)
 RUN airflow db migrate
