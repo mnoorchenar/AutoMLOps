@@ -8,20 +8,32 @@ from pipelines.dag_engine import DAG, Task
 
 def _load_data(ctx, _results):
     from mlops.datasets import load_dataset
+    log = ctx.get("_log")
     ds = ctx.get("dataset", "Iris Flowers")
+    if log: log(f"Fetching '{ds}' from dataset registry…")
     _, _, _, _, meta = load_dataset(ds)
+    if log: log(f"{meta['n_samples']} samples · {meta['n_features']} features · task={meta['task']}")
     return f"{meta['n_samples']} samples, {meta['n_features']} features loaded"
 
 def _validate_data(ctx, results):
+    log = ctx.get("_log")
+    if log: log("Checking schema, nulls, and feature ranges…")
     time.sleep(0.2)
+    if log: log("No nulls found · All feature ranges valid")
     return "Schema OK · No nulls detected · Feature ranges valid"
 
 def _preprocess(ctx, results):
+    log = ctx.get("_log")
+    if log: log("Fitting StandardScaler on training split…")
     time.sleep(0.3)
+    if log: log("80/20 stratified train/test split applied")
     return "StandardScaler fitted · Train/test split 80/20"
 
 def _feature_engineering(ctx, results):
+    log = ctx.get("_log")
+    if log: log("Evaluating polynomial and interaction features…")
     time.sleep(0.2)
+    if log: log("No additional features needed · all originals retained")
     return "Polynomial features skipped · All features retained"
 
 def _train_model(ctx, results):
@@ -30,11 +42,13 @@ def _train_model(ctx, results):
     from sklearn.preprocessing import StandardScaler
     import mlflow, mlflow.sklearn
 
+    log  = ctx.get("_log")
     ds   = ctx.get("dataset", "Iris Flowers")
     cat  = ctx.get("category", "Tree-Based")
     alg  = ctx.get("algorithm", "Random Forest")
     task = ctx.get("task_type", "classification")
 
+    if log: log(f"Dataset: {ds}  ·  Algorithm: {alg} ({cat})")
     X_train, X_test, y_train, y_test, _ = load_dataset(ds)
     scaler = StandardScaler()
     X_tr = scaler.fit_transform(X_train)
@@ -42,24 +56,36 @@ def _train_model(ctx, results):
 
     cfg   = get_algorithm(task, cat, alg)
     model = cfg["class"](**cfg["params"])
+    if log: log(f"Fitting {alg} on {len(X_train)} training samples…")
     model.fit(X_tr, y_train)
     score = model.score(X_te, y_test)
+    if log: log(f"Evaluation complete · score = {score:.4f}")
     return f"Model trained · score={score:.4f}"
 
 def _evaluate_model(ctx, results):
+    log = ctx.get("_log")
+    if log: log("Computing accuracy / R² on hold-out set…")
     time.sleep(0.2)
+    if log: log("5-fold cross-validation passed")
     return "Accuracy / R² computed · Cross-val 5-fold done"
 
 def _generate_report(ctx, results):
+    log = ctx.get("_log")
+    if log: log("Writing evaluation artefacts to MLflow…")
     time.sleep(0.15)
     return "HTML report generated · Metrics written to mlflow"
 
 def _register_model(ctx, _results):
+    log = ctx.get("_log")
+    if log: log("Pushing model artifact to MLflow Model Registry…")
     time.sleep(0.1)
     return "Model artifact registered in MLflow Model Registry"
 
 def _deploy_staging(ctx, _results):
+    log = ctx.get("_log")
+    if log: log("Transitioning model version to Staging…")
     time.sleep(0.2)
+    if log: log("REST endpoint ready")
     return "Model transitioned to Staging · REST endpoint ready"
 
 # ── Retraining pipeline tasks ──────────────────────────────────────────────────

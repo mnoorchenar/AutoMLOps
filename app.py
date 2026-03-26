@@ -233,8 +233,7 @@ def api_pipeline_execute(pipeline_id):
     except ImportError:
         app.logger.warning("Airflow not installed — using built-in DAG engine")
     except Exception as af_err:
-        app.logger.error(f"Airflow trigger failed: {af_err}")
-        return jsonify({"error": f"Airflow error: {af_err}"}), 500
+        app.logger.warning(f"Airflow trigger failed, falling back to built-in engine: {af_err}")
 
     exec_id = execute_dag(dag, context)
     return jsonify({"exec_id": exec_id, "status": "queued", "engine": "builtin"})

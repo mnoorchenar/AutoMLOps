@@ -98,6 +98,13 @@ def _run_dag(exec_id: str, dag: DAG, context: dict):
             with _lock:
                 pipeline_executions[exec_id]["task_states"][tid].update(kw)
 
+        def _push_log(msg: str):
+            with _lock:
+                ts = datetime.utcnow().strftime('%H:%M:%S')
+                pipeline_executions[exec_id]["logs"].append(f"[{ts}]    {msg}")
+
+        context = {**context, "_log": _push_log}
+
         _upd(status="running", progress=0)
 
         for step_idx, tid in enumerate(order):

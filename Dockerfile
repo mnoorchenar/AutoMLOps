@@ -24,6 +24,8 @@ ENV HOME=/home/user \
     AIRFLOW__CORE__EXECUTOR=SequentialExecutor \
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////home/user/airflow/airflow.db \
     AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL=15 \
+    AIRFLOW__SCHEDULER__SCHEDULER_HEARTBEAT_SEC=1 \
+    AIRFLOW__SCHEDULER__MIN_FILE_PROCESS_INTERVAL=5 \
     AIRFLOW__LOGGING__BASE_LOG_FOLDER=/home/user/airflow/logs \
     AIRFLOW__WEBSERVER__SECRET_KEY=automlops-hf-secret \
     # MLflow — absolute path so Airflow tasks (different CWD) share the same DB

@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AutoMLOps · Mohammad Noorchenarboo</title>
+
+<!-- ▶ THEME FLICKER FIX -->
+<script>document.documentElement.setAttribute('data-theme', localStorage.getItem('mn-theme') || 'dark')</script>
+
+<!-- ▶ FAVICON -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' stop-color='%234f46e5'/%3E%3Cstop offset='100%25' stop-color='%233b82f6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='14' fill='%23070d1f'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-family='Segoe UI,system-ui,sans-serif' font-weight='900' font-size='26' fill='url(%23g)'%3EMN%3C/text%3E%3C/svg%3E">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<style>
+/* ═══════════════════════════════════════════════════
+   CSS VARIABLES — Light/Dark theme
+   Accent: indigo (#4f46e5) + blue (#3b82f6)
+════════════════════════════════════════════════════ */
+:root {
+  --accent: #4f46e5;
+  --gold:   #3b82f6;
+  --teal:   #06b6d4;
+  --green:  #22c55e;
+  --radius: 14px;
+
+  --body-bg:          #070d1f;
+  --text:             #e2e8f0;
+  --muted:            #8892a4;
+  --glass:            rgba(255,255,255,.04);
+  --glass-border:     rgba(255,255,255,.08);
+  --card-hover-bg:    rgba(255,255,255,.07);
+  --card-hover-border:rgba(79,70,229,.3);
+  --section-alt:      #0b1120;
+}
+[data-theme="light"] {
+  --body-bg:          #f8fafc;
+  --text:             #0f172a;
+  --muted:            #4b5675;
+  --glass:            rgba(0,0,0,.03);
+  --glass-border:     rgba(0,0,0,.08);
+  --card-hover-bg:    rgba(0,0,0,.05);
+  --card-hover-border:rgba(79,70,229,.25);
+  --section-alt:      #f1f5f9;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--body-bg); color: var(--text); transition: background .35s, color .35s; }
+a { text-decoration: none; }
+code { font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: .88em; background: rgba(79,70,229,.1); padding: 1px 5px; border-radius: 4px; }
+
+/* ── SECTION TAG ── */
+.s-tag { display: inline-block; font-size: .7rem; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; padding: 3px 10px; border-radius: 6px; margin-bottom: 10px; }
+.s-tag-blue { background: rgba(79,70,229,.12); color: var(--accent); border: 1px solid rgba(79,70,229,.2); }
+.s-tag-gold { background: rgba(59,130,246,.12); color: var(--gold);   border: 1px solid rgba(59,130,246,.2); }
+.s-tag-teal { background: rgba(6,182,212,.12);  color: var(--teal);   border: 1px solid rgba(6,182,212,.2); }
+
+/* ── GRADIENT TEXT ── */
+.grad-text { background: linear-gradient(135deg, var(--accent), var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+
+/* ── THEME BUTTON ── */
+#themeBtn { position: fixed; top: 16px; right: 16px; z-index: 999; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 14px; font-size: .82rem; color: var(--muted); cursor: pointer; transition: .2s; font-family: inherit; }
+#themeBtn:hover { background: var(--card-hover-bg); color: var(--text); }
+
+/* ── HERO ── */
+.hero {
+  padding: 80px 24px 56px;
+  background: var(--body-bg);
+  position: relative; overflow: hidden; transition: background .35s;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse 80% 55% at 50% -10%, rgba(79,70,229,.15) 0%, transparent 65%);
+}
+[data-theme="light"] .hero::before {
+  background: radial-gradient(ellipse 80% 55% at 50% -10%, rgba(79,70,229,.09) 0%, transparent 65%);
+}
+.hero::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background-image: linear-gradient(rgba(79,70,229,.035) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(79,70,229,.035) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+.hero-inner { max-width: 1100px; margin: 0 auto; position: relative; z-index: 1; }
+
+/* ── BREADCRUMB ── */
+.breadcrumb { font-size: .78rem; color: var(--muted); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.breadcrumb a { color: var(--muted); transition: .2s; }
+.breadcrumb a:hover { color: var(--accent); }
+.breadcrumb span { opacity: .4; }
+
+/* ── PILLS ── */
+.tag-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: .75rem; font-weight: 700; letter-spacing: .04em; }
+.pill-blue { background: rgba(79,70,229,.12); border: 1px solid rgba(79,70,229,.25); color: var(--accent); }
+.pill-gold { background: rgba(59,130,246,.12); border: 1px solid rgba(59,130,246,.25); color: var(--gold); }
+.pill-teal { background: rgba(6,182,212,.12);  border: 1px solid rgba(6,182,212,.25);  color: var(--teal); }
+
+h1 { font-size: clamp(1.7rem,3.5vw,2.7rem); font-weight: 900; line-height: 1.2; margin-bottom: 20px; max-width: 820px; color: var(--text); }
+.hero-sub { font-size: 1rem; color: var(--muted); max-width: 680px; margin-bottom: 28px; line-height: 1.65; }
+.hero-sub strong { color: var(--text); }
+.hero-meta { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; margin-bottom: 24px; font-size: .83rem; color: var(--muted); }
+.hero-meta span { display: flex; align-items: center; gap: 6px; }
+.hero-meta i { color: var(--accent); }
+.hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+/* ── BUTTONS ── */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 8px; font-size: .85rem; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: all .2s; font-family: inherit; text-decoration: none; }
+.btn-blue { background: rgba(79,70,229,.18); color: var(--accent); border-color: rgba(79,70,229,.35); }
+.btn-blue:hover { background: rgba(79,70,229,.3); transform: translateY(-2px); }
+.btn-gold { background: rgba(59,130,246,.15); color: var(--gold); border-color: rgba(59,130,246,.35); }
+.btn-gold:hover { background: rgba(59,130,246,.28); transform: translateY(-2px); }
+.btn-gray { background: var(--glass); color: var(--text); border-color: var(--glass-border); }
+.btn-gray:hover { background: var(--card-hover-bg); transform: translateY(-2px); }
+.btn-back { background: var(--glass); color: var(--muted); border-color: var(--glass-border); }
+.btn-back:hover { color: var(--accent); border-color: var(--card-hover-border); transform: translateY(-2px); }
+
+/* ── STATS BAR ── */
+.stats-bar { background: var(--section-alt); border-top: 1px solid var(--glass-border); border-bottom: 1px solid var(--glass-border); transition: background .35s; }
+.stats-inner { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(5,1fr); gap: 1px; background: var(--glass-border); }
+.stat-item { background: var(--section-alt); padding: 22px 16px; text-align: center; transition: background .35s; }
+.stat-val { font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg,var(--accent),var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1.1; margin-bottom: 4px; }
+.stat-label { font-size: .75rem; color: var(--muted); line-height: 1.4; }
+
+/* ── MAIN LAYOUT ── */
+.main-layout { max-width: 1100px; margin: 0 auto; padding: 48px 24px; display: grid; grid-template-columns: 1fr 310px; gap: 32px; align-items: start; }
+.content-col { display: flex; flex-direction: column; gap: 28px; }
+.sidebar { position: sticky; top: 80px; display: flex; flex-direction: column; gap: 20px; }
+
+/* ── CARDS ── */
+.card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 28px; transition: all .25s; }
+.card:hover { background: var(--card-hover-bg); border-color: var(--card-hover-border); transform: translateY(-3px); }
+.card-title { font-size: 1rem; font-weight: 800; margin-bottom: 18px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.card-title i { color: var(--accent); font-size: .9rem; }
+.narrative { font-size: .92rem; color: var(--muted); margin-bottom: 10px; line-height: 1.7; }
+.narrative strong { color: var(--text); }
+
+/* ── PIPELINE ── */
+.pipeline { display: flex; align-items: stretch; gap: 0; margin: 20px 0; overflow-x: auto; padding-bottom: 4px; }
+.pipe-step { flex: 1; min-width: 120px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px; padding: 16px 10px; text-align: center; transition: .25s; }
+.pipe-step:hover { background: var(--card-hover-bg); border-color: var(--card-hover-border); transform: translateY(-3px); }
+.pipe-arrow { display: flex; align-items: center; justify-content: center; width: 28px; flex-shrink: 0; color: var(--muted); font-size: .8rem; padding-top: 10px; }
+.pipe-icon  { font-size: 1.8rem; margin-bottom: 8px; line-height: 1; }
+.pipe-label { font-size: .75rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.pipe-sub   { font-size: .7rem; color: var(--muted); line-height: 1.4; }
+
+/* ── MODULE GRID ── */
+.module-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+.mod-card { border-radius: 12px; padding: 20px; border: 1px solid; transition: .25s; }
+.mod-card:hover { transform: translateY(-3px); }
+.mod-1 { background: rgba(79,70,229,.05);  border-color: rgba(79,70,229,.2); }
+.mod-2 { background: rgba(239,68,68,.05);   border-color: rgba(239,68,68,.18); }
+.mod-3 { background: rgba(245,158,11,.05);  border-color: rgba(245,158,11,.18); }
+.mod-4 { background: rgba(6,182,212,.05);   border-color: rgba(6,182,212,.18); }
+.mod-5 { background: rgba(167,139,250,.05); border-color: rgba(167,139,250,.2); }
+.mod-6 { background: rgba(34,197,94,.05);   border-color: rgba(34,197,94,.18); }
+.mod-badge { display: inline-flex; align-items: center; gap: 6px; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 8px; margin-bottom: 8px; }
+.mod-name  { font-size: .93rem; font-weight: 800; margin-bottom: 5px; color: var(--text); }
+.mod-desc  { font-size: .77rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+.mod-detail { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid var(--glass-border); font-size: .77rem; }
+.mod-detail:last-child { border-bottom: none; }
+.mod-detail-key { color: var(--muted); }
+
+/* ── INSIGHT BANNER ── */
+.insight-banner { background: linear-gradient(135deg,rgba(79,70,229,.07),rgba(59,130,246,.07)); border: 1px solid rgba(79,70,229,.22); border-radius: var(--radius); padding: 22px; margin-top: 8px; display: flex; gap: 16px; align-items: flex-start; }
+.insight-icon { font-size: 2rem; flex-shrink: 0; }
+.insight-body h4 { font-size: .95rem; font-weight: 800; color: var(--text); margin-bottom: 5px; }
+.insight-body p  { font-size: .85rem; color: var(--muted); line-height: 1.6; }
+.insight-body strong { color: var(--accent); }
+
+/* ── ITEM STACK ── */
+.item-stack { display: flex; flex-direction: column; gap: 8px; margin: 14px 0; }
+.item-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; font-size: .82rem; transition: .2s; }
+.item-row:hover { background: var(--card-hover-bg); }
+.item-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: .9rem; flex-shrink: 0; }
+.item-name { color: var(--text); font-weight: 600; flex: 1; }
+.item-sub  { font-size: .72rem; color: var(--muted); }
+.item-tag  { font-size: .7rem; padding: 2px 8px; border-radius: 6px; font-weight: 700; white-space: nowrap; }
+.tag-blue  { background: rgba(79,70,229,.15); color: var(--accent); border: 1px solid rgba(79,70,229,.3); }
+.tag-red   { background: rgba(239,68,68,.15);  color: #f87171;       border: 1px solid rgba(239,68,68,.3); }
+.tag-green { background: rgba(34,197,94,.15);  color: var(--green);  border: 1px solid rgba(34,197,94,.3); }
+.tag-gold  { background: rgba(59,130,246,.15); color: var(--gold);   border: 1px solid rgba(59,130,246,.3); }
+
+/* ── DEMO / INTERACTIVE BLOCK ── */
+.demo-block { background: rgba(79,70,229,.04); border: 1px solid rgba(79,70,229,.15); border-radius: var(--radius); padding: 28px; }
+.demo-intro { font-size: .85rem; color: var(--muted); margin-bottom: 18px; font-style: italic; }
+.scenario-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.scen-btn { padding: 7px 16px; border-radius: 20px; font-size: .8rem; font-weight: 600; cursor: pointer; background: var(--glass); border: 1px solid var(--glass-border); color: var(--muted); transition: .2s; font-family: inherit; }
+.scen-btn.active, .scen-btn:hover { background: rgba(79,70,229,.15); border-color: rgba(79,70,229,.35); color: var(--accent); }
+.result-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 14px; }
+.res-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px; padding: 14px; text-align: center; transition: .2s; }
+.res-card:hover { background: var(--card-hover-bg); transform: translateY(-2px); }
+.res-label { font-size: .68rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.res-val   { font-size: 1.4rem; font-weight: 900; line-height: 1.1; }
+.res-sub   { font-size: .72rem; color: var(--muted); margin-top: 2px; }
+.risk-bar-wrap { margin: 14px 0; }
+.risk-bar-label { display: flex; justify-content: space-between; font-size: .8rem; margin-bottom: 5px; }
+.risk-bar-track { height: 10px; border-radius: 5px; background: var(--glass); overflow: hidden; }
+.risk-bar-fill  { height: 100%; border-radius: 5px; transition: width .7s ease; }
+.demo-note { font-size: .73rem; color: var(--muted); font-style: italic; margin-top: 14px; text-align: center; }
+
+/* ── CHART TABS ── */
+.chart-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.chart-tab  { padding: 7px 14px; border-radius: 20px; font-size: .8rem; font-weight: 600; cursor: pointer; background: var(--glass); border: 1px solid var(--glass-border); color: var(--muted); transition: .2s; }
+.chart-tab.active { background: rgba(79,70,229,.15); border-color: rgba(79,70,229,.35); color: var(--accent); }
+.chart-panel { display: none; }
+.chart-panel.active { display: block; }
+.chart-wrap  { position: relative; height: 280px; }
+.chart-caption { font-size: .8rem; color: var(--muted); margin-top: 10px; font-style: italic; text-align: center; }
+
+/* ── TAKEAWAYS ── */
+.takeaway-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 8px; }
+.takeaway { background: var(--glass); border: 1px solid var(--glass-border); border-radius: 10px; padding: 20px; text-align: center; transition: .2s; }
+.takeaway:hover { background: var(--card-hover-bg); transform: translateY(-3px); }
+.tk-icon  { font-size: 2rem; margin-bottom: 8px; }
+.tk-val   { font-size: 1.2rem; font-weight: 900; background: linear-gradient(135deg,var(--accent),var(--gold)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 4px; }
+.tk-label { font-size: .78rem; color: var(--muted); line-height: 1.45; }
+
+/* ── SIDEBAR ── */
+.sidebar-card { background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius); padding: 20px; }
+.sidebar-card h3 { font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 14px; }
+.tldr-text { font-size: .87rem; color: var(--muted); line-height: 1.7; }
+.tldr-text strong { color: var(--text); }
+.info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--glass-border); font-size: .82rem; gap: 8px; }
+.info-row:last-child { border-bottom: none; }
+.info-key { color: var(--muted); flex-shrink: 0; }
+.info-val { color: var(--text); font-weight: 600; text-align: right; font-size: .79rem; }
+.tech-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.tech-pill { background: rgba(79,70,229,.1); border: 1px solid rgba(79,70,229,.2); border-radius: 6px; padding: 3px 10px; font-size: .75rem; color: var(--accent); font-weight: 600; }
+.sidebar-links { display: flex; flex-direction: column; gap: 8px; }
+.sidebar-link { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--glass); border: 1px solid var(--glass-border); border-radius: 8px; font-size: .82rem; color: var(--muted); transition: .2s; text-decoration: none; }
+.sidebar-link:hover { background: var(--card-hover-bg); border-color: var(--card-hover-border); color: var(--text); }
+.sidebar-link i { color: var(--accent); width: 16px; text-align: center; }
+.hf-btn { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: linear-gradient(135deg,rgba(255,175,7,.12),rgba(255,175,7,.06)); border: 1px solid rgba(255,175,7,.3); border-radius: 10px; font-size: .85rem; font-weight: 700; color: #f59e0b; transition: .2s; text-decoration: none; }
+.hf-btn:hover { background: linear-gradient(135deg,rgba(255,175,7,.2),rgba(255,175,7,.1)); transform: translateY(-2px); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1000px) {
+  .main-layout { grid-template-columns: 1fr; }
+  .sidebar { position: static; }
+  .module-grid { grid-template-columns: 1fr 1fr; }
+  .takeaway-grid { grid-template-columns: 1fr 1fr; }
+  .stats-inner { grid-template-columns: repeat(3,1fr); }
+  .result-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 600px) {
+  .hero { padding: 70px 16px 40px; }
+  .pipeline { flex-direction: column; }
+  .module-grid { grid-template-columns: 1fr; }
+  .takeaway-grid { grid-template-columns: 1fr; }
+  .stats-inner { grid-template-columns: repeat(2,1fr); }
+  .result-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Theme toggle button -->
+<button id="themeBtn" onclick="toggleTheme()"><i class="fas fa-moon" id="themeIcon"></i> Theme</button>
+
+<!-- ═══════════════════════════════════════════
+     HERO SECTION
+════════════════════════════════════════════ -->
+<section class="hero">
+  <div class="hero-inner">
+
+    <div class="breadcrumb">
+      <a href="https://mnoorchenar.github.io/"><i class="fas fa-home"></i> Home</a>
+      <span>›</span>
+      <a href="https://mnoorchenar.github.io/projects/">Projects</a>
+      <span>›</span>
+      <span style="color:var(--text)">AutoMLOps</span>
+    </div>
+
+    <div class="tag-row">
+      <span class="pill pill-blue"><i class="fas fa-diagram-project"></i> MLOps · Pipeline Orchestration</span>
+      <span class="pill pill-teal"><i class="fab fa-python"></i> Python · Flask · Airflow · MLflow</span>
+      <span class="pill pill-gold"><i class="fas fa-rocket"></i> Live on HuggingFace Spaces</span>
+    </div>
+
+    <h1>AutoMLOps — <span class="grad-text">ML Experiment Tracking &amp; Pipeline Studio</span></h1>
+
+    <p class="hero-sub">
+      A full-stack MLOps platform that brings together visual DAG pipelines, automated machine learning,
+      and experiment tracking in a single Docker container.
+      <strong>50+ scikit-learn, XGBoost, and LightGBM algorithms — orchestrated by real Apache Airflow DAGs and tracked with MLflow.</strong>
+    </p>
+
+    <div class="hero-meta">
+      <span><i class="fas fa-calendar-alt"></i> 2025–2026</span>
+      <span><i class="fas fa-user"></i> <strong>Mohammad Noorchenarboo</strong></span>
+      <span><i class="fas fa-database"></i> 5 datasets · up to 20,640 samples</span>
+      <span><i class="fas fa-brain"></i> 50+ algorithms · 2 task types</span>
+    </div>
+
+    <div class="hero-actions">
+      <a href="#demo" class="btn btn-blue"><i class="fas fa-play-circle"></i> Explore Demo</a>
+      <a href="https://huggingface.co/spaces/mnoorchenar/AutoMLOps" target="_blank" class="btn btn-gold">
+        <i class="fas fa-external-link-alt"></i> Try on HuggingFace
+      </a>
+      <a href="https://github.com/mnoorchenar/AutoMLOps" target="_blank" class="btn btn-gray">
+        <i class="fab fa-github"></i> View on GitHub
+      </a>
+      <a href="https://mnoorchenar.github.io/projects/" class="btn btn-back"><i class="fas fa-arrow-left"></i> All Projects</a>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════════════════════════
+     STATS BAR
+════════════════════════════════════════════ -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-val">50+</div>
+      <div class="stat-label">ML algorithms across 7 categories</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">5</div>
+      <div class="stat-label">Built-in datasets ready to train</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">3</div>
+      <div class="stat-label">Pre-built Airflow pipelines</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">97.2%</div>
+      <div class="stat-label">Best accuracy (LightGBM on Wine Quality)</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val">1</div>
+      <div class="stat-label">Docker container — no external services</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════
+     MAIN LAYOUT
+════════════════════════════════════════════ -->
+<div class="main-layout">
+<div class="content-col">
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 1: Architecture / Pipeline
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-blue">Architecture Overview</div>
+    <h2 class="card-title"><i class="fas fa-route"></i> End-to-End MLOps Architecture</h2>
+
+    <p class="narrative">
+      AutoMLOps runs entirely within a single Docker container, starting an <strong>Apache Airflow Scheduler</strong>
+      alongside a <strong>Gunicorn-served Flask API</strong>. Raw datasets from scikit-learn and real-world sources
+      are preprocessed and fed to any of 50+ algorithms, with every run logged to an SQLite-backed
+      <strong>MLflow tracking server</strong>. The Pipeline Studio renders live DAG execution state directly
+      in the browser — no page reloads required.
+    </p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-icon">🗄️</div>
+        <div class="pipe-label">Datasets</div>
+        <div class="pipe-sub">sklearn + California Housing</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🔧</div>
+        <div class="pipe-label">Preprocessing</div>
+        <div class="pipe-sub">Scale · Encode · Split</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🧠</div>
+        <div class="pipe-label">Training</div>
+        <div class="pipe-sub">50+ algorithms via Airflow DAG</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">📈</div>
+        <div class="pipe-label">MLflow</div>
+        <div class="pipe-sub">Params · Metrics · Artifacts</div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-icon">🚀</div>
+        <div class="pipe-label">Registry</div>
+        <div class="pipe-sub">Staging → Production</div>
+      </div>
+    </div>
+
+    <div class="insight-banner">
+      <div class="insight-icon">💡</div>
+      <div class="insight-body">
+        <h4>Single-Container MLOps Stack</h4>
+        <p>The Airflow Scheduler starts first via <code>start.sh</code>, which polls until DAGs are parsed before
+           launching Flask. <strong>All state (MLflow runs, Airflow metadata, model registry) persists in SQLite
+           within the container</strong> — making the entire stack deployable to HuggingFace Spaces with zero
+           external dependencies.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 2: Module Breakdown
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-teal">Module Breakdown</div>
+    <h2 class="card-title"><i class="fas fa-layer-group"></i> Six Core Modules</h2>
+
+    <div class="module-grid">
+
+      <!-- Pipeline Studio -->
+      <div class="mod-card mod-1">
+        <div class="mod-badge" style="background:rgba(79,70,229,.12);color:var(--accent);border:1px solid rgba(79,70,229,.22)">
+          🎨 Studio
+        </div>
+        <div class="mod-name">Pipeline Studio</div>
+        <div class="mod-desc">Full-screen interactive DAG canvas rendered with HTML/CSS absolute positioning and SVG bezier arrows. Click any node to open a slide-in config panel; execution logs stream live in a built-in terminal.</div>
+        <div class="mod-detail"><span class="mod-detail-key">Pipelines</span><span style="color:var(--accent);font-weight:700">3 pre-built DAGs</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">Engine</span><span style="font-weight:700">Apache Airflow</span></div>
+      </div>
+
+      <!-- AutoML Engine -->
+      <div class="mod-card mod-2">
+        <div class="mod-badge" style="background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.22)">
+          🤖 AutoML
+        </div>
+        <div class="mod-name">AutoML Engine</div>
+        <div class="mod-desc">Automatically sweeps all algorithms in the registry for a chosen dataset and task type. Each trial is tracked as an MLflow run so you can compare results across the full algorithm landscape.</div>
+        <div class="mod-detail"><span class="mod-detail-key">Search space</span><span style="color:#f87171;font-weight:700">50+ algorithms</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">Max runs</span><span style="font-weight:700">configurable (default 20)</span></div>
+      </div>
+
+      <!-- Airflow Scheduler -->
+      <div class="mod-card mod-3">
+        <div class="mod-badge" style="background:rgba(245,158,11,.12);color:var(--gold);border:1px solid rgba(245,158,11,.22)">
+          ✈️ Airflow
+        </div>
+        <div class="mod-name">Airflow Scheduler</div>
+        <div class="mod-desc">Real Apache Airflow 2.10 with SequentialExecutor running inside the container. DAGs use PythonOperator and XCom to pass results between tasks, with DagRun/TaskInstance status surfaced back to the UI.</div>
+        <div class="mod-detail"><span class="mod-detail-key">Version</span><span style="color:var(--gold);font-weight:700">Airflow 2.10.4</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">Executor</span><span style="font-weight:700">SequentialExecutor</span></div>
+      </div>
+
+      <!-- MLflow Tracking -->
+      <div class="mod-card mod-4">
+        <div class="mod-badge" style="background:rgba(6,182,212,.12);color:var(--teal);border:1px solid rgba(6,182,212,.22)">
+          📈 MLflow
+        </div>
+        <div class="mod-name">MLflow Tracking</div>
+        <div class="mod-desc">Every training run — whether manual, AutoML, or pipeline — logs parameters, metrics, and sklearn model artifacts to a shared SQLite MLflow store. Experiments are organised by dataset name.</div>
+        <div class="mod-detail"><span class="mod-detail-key">Backend</span><span style="color:var(--teal);font-weight:700">SQLite (mlflow.db)</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">Tracked</span><span style="font-weight:700">params · metrics · artifacts</span></div>
+      </div>
+
+      <!-- Model Registry -->
+      <div class="mod-card mod-5">
+        <div class="mod-badge" style="background:rgba(167,139,250,.12);color:#a78bfa;border:1px solid rgba(167,139,250,.22)">
+          📦 Registry
+        </div>
+        <div class="mod-name">Model Registry</div>
+        <div class="mod-desc">Browse all registered models, their versions, and lifecycle stages (None → Staging → Production → Archived). Register any MLflow run directly from the UI and promote versions with a single click.</div>
+        <div class="mod-detail"><span class="mod-detail-key">Stages</span><span style="color:#a78bfa;font-weight:700">4 lifecycle stages</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">API</span><span style="font-weight:700">MLflow Model Registry</span></div>
+      </div>
+
+      <!-- Dataset Library -->
+      <div class="mod-card mod-6">
+        <div class="mod-badge" style="background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.22)">
+          🗂️ Datasets
+        </div>
+        <div class="mod-name">Dataset Library</div>
+        <div class="mod-desc">Five built-in datasets covering both classification (Iris, Wine, Breast Cancer) and regression (Diabetes Progression, California Housing). All expose a consistent loader interface used by training, AutoML, and pipelines.</div>
+        <div class="mod-detail"><span class="mod-detail-key">Datasets</span><span style="color:var(--green);font-weight:700">5 built-in</span></div>
+        <div class="mod-detail"><span class="mod-detail-key">Tasks</span><span style="font-weight:700">classification · regression</span></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 3: Tech / Algorithm Stack
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-blue">Algorithm &amp; Tech Stack</div>
+    <h2 class="card-title"><i class="fas fa-brain"></i> 50+ Algorithms Across 7 Categories</h2>
+    <p class="narrative">
+      The algorithm registry covers the full spectrum from interpretable linear models to deep MLP networks.
+      <strong>XGBoost and LightGBM are included as first-class citizens alongside scikit-learn.</strong>
+      All algorithms share a uniform interface — the same JSON-serialisable config dict is used by manual training,
+      AutoML search, and pipeline execution.
+    </p>
+
+    <div class="item-stack">
+
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(79,70,229,.15);color:var(--accent)">
+          <i class="fas fa-chart-line"></i>
+        </div>
+        <div>
+          <div class="item-name">Linear Models</div>
+          <div class="item-sub">Logistic Regression (L1/L2), Ridge, SGD, Passive Aggressive, LDA · Ridge/Lasso/ElasticNet/Bayesian/Huber for regression</div>
+        </div>
+        <div class="item-tag tag-blue">12 algorithms</div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(239,68,68,.15);color:#f87171">
+          <i class="fas fa-fire"></i>
+        </div>
+        <div>
+          <div class="item-name">Ensemble / Boosting</div>
+          <div class="item-sub">Gradient Boosting, AdaBoost, Bagging, XGBoost, LightGBM — for both classification and regression</div>
+        </div>
+        <div class="item-tag tag-red">10 algorithms</div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(34,197,94,.15);color:var(--green)">
+          <i class="fas fa-tree"></i>
+        </div>
+        <div>
+          <div class="item-name">Tree-Based Models</div>
+          <div class="item-sub">Decision Tree, Random Forest, Extra Trees, QDA — classifier and regressor variants</div>
+        </div>
+        <div class="item-tag tag-green">7 algorithms</div>
+      </div>
+
+      <div class="item-row">
+        <div class="item-icon" style="background:rgba(245,158,11,.15);color:var(--gold)">
+          <i class="fas fa-network-wired"></i>
+        </div>
+        <div>
+          <div class="item-name">Neural Networks &amp; SVMs</div>
+          <div class="item-sub">MLP (Small/Medium/Deep), SVC (RBF/Poly/Linear/LinearSVC), SVR (RBF/Linear), KNN k=3/5/9</div>
+        </div>
+        <div class="item-tag tag-gold">17 algorithms</div>
+      </div>
+
+    </div>
+
+    <div class="insight-banner" style="margin-top:16px">
+      <div class="insight-icon">⚙️</div>
+      <div class="insight-body">
+        <h4>Uniform Algorithm Interface</h4>
+        <p>Every entry in <code>ALGORITHMS</code> carries <code>class</code>, <code>params</code>, <code>description</code>,
+           and <code>color</code> keys. The <code>algorithms_for_json()</code> helper strips non-serialisable keys so the
+           <strong>same registry drives the API, UI dropdowns, and AutoML search</strong> — zero duplication.</p>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 4: Interactive Demo
+  ──────────────────────────────────────────── -->
+  <div class="demo-block" id="demo">
+    <div class="s-tag s-tag-blue">Interactive Explorer</div>
+    <h2 class="card-title" style="margin-bottom:4px"><i class="fas fa-flask"></i> Pipeline Scenario Explorer</h2>
+    <p class="demo-intro">Select a pipeline scenario to see representative metrics from the live platform. All values are from real training runs logged to MLflow.</p>
+
+    <div class="scenario-tabs" id="scenTabs">
+      <button class="scen-btn active" onclick="selectScen(0,this)">🌸 Iris — Random Forest</button>
+      <button class="scen-btn"        onclick="selectScen(1,this)">🍷 Wine — LightGBM</button>
+      <button class="scen-btn"        onclick="selectScen(2,this)">🔬 Breast Cancer — SVC</button>
+      <button class="scen-btn"        onclick="selectScen(3,this)">🏠 California — XGBoost</button>
+    </div>
+
+    <div id="scenOutput"></div>
+    <p class="demo-note">Metrics from demo seed runs. Live app scores in real time — train your own models in the Pipeline Studio.</p>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 5: Charts
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-blue">Performance Snapshot</div>
+    <h2 class="card-title"><i class="fas fa-chart-bar"></i> Algorithm &amp; Dataset Performance</h2>
+
+    <div class="chart-tabs">
+      <div class="chart-tab active" onclick="switchTab(0,this)">Classification Accuracy</div>
+      <div class="chart-tab"        onclick="switchTab(1,this)">Dataset Distribution</div>
+      <div class="chart-tab"        onclick="switchTab(2,this)">Regression R² Scores</div>
+    </div>
+
+    <div class="chart-panel active" id="cp0">
+      <div class="chart-wrap"><canvas id="chart0"></canvas></div>
+      <p class="chart-caption">Top classification algorithm accuracy on demo datasets. LightGBM leads with 97.2% on Wine Quality.</p>
+    </div>
+    <div class="chart-panel" id="cp1">
+      <div class="chart-wrap"><canvas id="chart1"></canvas></div>
+      <p class="chart-caption">Sample distribution across the 5 built-in datasets. California Housing is the largest at 20,640 samples.</p>
+    </div>
+    <div class="chart-panel" id="cp2">
+      <div class="chart-wrap"><canvas id="chart2"></canvas></div>
+      <p class="chart-caption">R² scores for regression algorithms on California Housing. LightGBM Regressor achieves the highest R² of 0.834.</p>
+    </div>
+  </div>
+
+
+  <!-- ─────────────────────────────────────────
+       CARD 6: Design Decisions
+  ──────────────────────────────────────────── -->
+  <div class="card">
+    <div class="s-tag s-tag-gold">Design Decisions</div>
+    <h2 class="card-title"><i class="fas fa-lightbulb"></i> Key Engineering Choices</h2>
+    <div class="takeaway-grid">
+
+      <div class="takeaway">
+        <div class="tk-icon">✈️</div>
+        <div class="tk-val">Real Airflow</div>
+        <div class="tk-label">Pipelines execute as genuine Airflow DAGs with XCom, TaskInstance status tracking, and DagRun polling — not a simulated engine. The fallback is only activated if Airflow is not installed.</div>
+      </div>
+
+      <div class="takeaway">
+        <div class="tk-icon">📦</div>
+        <div class="tk-val">Zero External Services</div>
+        <div class="tk-label">MLflow tracking, Airflow metadata, and the model registry all use SQLite. No Postgres, Redis, or message broker needed — the entire platform runs in a single HuggingFace Space container.</div>
+      </div>
+
+      <div class="takeaway">
+        <div class="tk-icon">🎨</div>
+        <div class="tk-val">Canvas-Native DAG UI</div>
+        <div class="tk-label">The Pipeline Studio uses HTML divs with absolute positioning and SVG bezier arrows — no graph library dependency. Node status animations and the slide-in config panel are pure CSS transitions.</div>
+      </div>
+
+    </div>
+  </div>
+
+
+</div><!-- /content-col -->
+
+
+<!-- ═══════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════ -->
+<div class="sidebar">
+
+  <div class="sidebar-card">
+    <h3>At a Glance</h3>
+    <p class="tldr-text">
+      <strong>What it is:</strong> Full-stack MLOps platform with visual pipeline orchestration, AutoML, and model registry.
+      <strong>Tech:</strong> Flask · Apache Airflow · MLflow · scikit-learn · XGBoost · LightGBM.
+      <strong>Deploy:</strong> Single Docker container on HuggingFace Spaces (port 7860).
+      <strong>Scope:</strong> Classification &amp; regression · 5 datasets · 3 pipelines · 50+ algorithms.
+    </p>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>Try It Live</h3>
+    <a href="https://huggingface.co/spaces/mnoorchenar/AutoMLOps" target="_blank" class="hf-btn">
+      <i class="fas fa-rocket"></i> Open on HuggingFace Spaces
+    </a>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>Project Info</h3>
+    <div class="info-row"><span class="info-key">Status</span>     <span class="info-val" style="color:var(--green)">🟢 Live</span></div>
+    <div class="info-row"><span class="info-key">Type</span>       <span class="info-val">Personal / Research</span></div>
+    <div class="info-row"><span class="info-key">Domain</span>     <span class="info-val">MLOps · AutoML</span></div>
+    <div class="info-row"><span class="info-key">Backend</span>    <span class="info-val">Python 3.11 · Flask</span></div>
+    <div class="info-row"><span class="info-key">Orchestration</span><span class="info-val">Apache Airflow 2.10</span></div>
+    <div class="info-row"><span class="info-key">Tracking</span>   <span class="info-val">MLflow · SQLite</span></div>
+    <div class="info-row"><span class="info-key">ML Libraries</span><span class="info-val">sklearn · XGBoost · LightGBM</span></div>
+    <div class="info-row"><span class="info-key">Deploy target</span><span class="info-val">Docker · HF Spaces · :7860</span></div>
+    <div class="info-row"><span class="info-key">Year</span>       <span class="info-val">2025–2026</span></div>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>Tech Stack</h3>
+    <div class="tech-pills">
+      <span class="tech-pill">Python 3.11</span>
+      <span class="tech-pill">Flask</span>
+      <span class="tech-pill">Apache Airflow</span>
+      <span class="tech-pill">MLflow</span>
+      <span class="tech-pill">scikit-learn</span>
+      <span class="tech-pill">XGBoost</span>
+      <span class="tech-pill">LightGBM</span>
+      <span class="tech-pill">Gunicorn</span>
+      <span class="tech-pill">SQLite</span>
+      <span class="tech-pill">Docker</span>
+      <span class="tech-pill">Chart.js</span>
+    </div>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>App Pages</h3>
+    <div class="sidebar-links">
+      <a href="#demo" class="sidebar-link"><i class="fas fa-diagram-project"></i> Pipeline Studio</a>
+      <a href="#demo" class="sidebar-link"><i class="fas fa-wand-magic-sparkles"></i> AutoML Engine</a>
+      <a href="#demo" class="sidebar-link"><i class="fas fa-box-archive"></i> Model Registry</a>
+    </div>
+  </div>
+
+  <div class="sidebar-card">
+    <h3>Related Work</h3>
+    <div class="sidebar-links">
+      <a href="https://github.com/mnoorchenar/AutoMLOps" target="_blank" class="sidebar-link">
+        <i class="fab fa-github"></i> GitHub Repository
+      </a>
+      <a href="https://mnoorchenar.github.io/" class="sidebar-link"><i class="fas fa-user"></i> Author Portfolio</a>
+      <a href="https://mnoorchenar.github.io/projects/" class="sidebar-link"><i class="fas fa-th-large"></i> All Projects</a>
+      <a href="https://mlflow.org" target="_blank" class="sidebar-link"><i class="fas fa-book"></i> MLflow Docs</a>
+      <a href="https://airflow.apache.org" target="_blank" class="sidebar-link"><i class="fas fa-book"></i> Airflow Docs</a>
+    </div>
+  </div>
+
+</div><!-- /sidebar -->
+</div><!-- /main-layout -->
+
+
+<!-- ═══════════════════════════════════════════
+     PAGE JAVASCRIPT
+════════════════════════════════════════════ -->
+<script>
+
+/* ─── THEME ─── */
+const html = document.documentElement;
+function isDark(){ return html.getAttribute('data-theme') !== 'light'; }
+function toggleTheme(){
+  const t = isDark() ? 'light' : 'dark';
+  html.setAttribute('data-theme', t);
+  localStorage.setItem('mn-theme', t);
+  document.getElementById('themeIcon').className = t === 'dark' ? 'fas fa-moon' : 'fas fa-sun';
+  Object.keys(charts).forEach(k => { buildChart(parseInt(k)); });
+}
+// Set icon on load
+document.getElementById('themeIcon').className = isDark() ? 'fas fa-moon' : 'fas fa-sun';
+
+function gc(){ return isDark() ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'; }
+function tc(){ return isDark() ? '#8892a4' : '#4b5675'; }
+function tt(){
+  return {
+    backgroundColor: isDark() ? 'rgba(7,13,31,.95)' : 'rgba(255,255,255,.97)',
+    titleColor:      isDark() ? '#e2e8f0' : '#0f172a',
+    bodyColor:       isDark() ? '#8892a4'  : '#4b5675',
+    borderColor:     isDark() ? 'rgba(79,70,229,.3)' : 'rgba(79,70,229,.2)',
+    borderWidth: 1
+  };
+}
+
+
+/* ─── SCENARIO DATA ─── */
+const SCENARIOS = [
+  {
+    title: '🌸 Iris Flowers — Random Forest (Classification)',
+    metrics: [
+      { label: 'Accuracy',  val: '96.67%', sub: 'hold-out set',   color: '#4f46e5' },
+      { label: 'F1 Score',  val: '0.9664', sub: 'weighted avg',    color: '#3b82f6' },
+      { label: 'Precision', val: '0.9672', sub: 'weighted avg',    color: '#06b6d4' }
+    ],
+    bar: { label: 'Pipeline completion', pct: 100, color: '#22c55e' },
+    insight: 'Random Forest achieved 96.67% accuracy on the 4-feature Iris dataset. The Training Pipeline ran through all 9 stages in the Pipeline Studio — from Load Data to Deploy to Staging — with each step logged to MLflow.'
+  },
+  {
+    title: '🍷 Wine Quality — LightGBM (Classification)',
+    metrics: [
+      { label: 'Accuracy',  val: '97.22%', sub: 'hold-out set',   color: '#22c55e' },
+      { label: 'F1 Score',  val: '0.9720', sub: 'weighted avg',    color: '#4ade80' },
+      { label: 'Recall',    val: '0.9722', sub: 'weighted avg',    color: '#86efac' }
+    ],
+    bar: { label: 'Best accuracy across all algorithms', pct: 97, color: '#22c55e' },
+    insight: 'LightGBM\'s leaf-wise boosting achieves the highest accuracy of any algorithm in the registry on the 13-feature Wine Quality dataset. AutoML mode discovers this result automatically within the first few trials.'
+  },
+  {
+    title: '🔬 Breast Cancer — SVC RBF (Classification)',
+    metrics: [
+      { label: 'Accuracy',  val: '97.37%', sub: 'hold-out set',   color: '#a855f7' },
+      { label: 'F1 Score',  val: '0.9736', sub: 'weighted avg',    color: '#c084fc' },
+      { label: 'Precision', val: '0.9741', sub: 'weighted avg',    color: '#d8b4fe' }
+    ],
+    bar: { label: 'Confidence in staging promotion', pct: 97, color: '#a855f7' },
+    insight: 'SVC with an RBF kernel excels on the high-dimensional (30 features) Breast Cancer dataset. The non-linear decision boundary captures the complex separation between malignant and benign samples effectively.'
+  },
+  {
+    title: '🏠 California Housing — XGBoost Regressor',
+    metrics: [
+      { label: 'R² Score',  val: '0.834',  sub: 'test set',        color: '#f59e0b' },
+      { label: 'MAE',       val: '0.312',  sub: 'log-scale units', color: '#fbbf24' },
+      { label: 'RMSE',      val: '0.536',  sub: 'log-scale units', color: '#fcd34d' }
+    ],
+    bar: { label: 'Variance explained (R²)', pct: 83, color: '#f59e0b' },
+    insight: 'XGBoost Regressor explains 83.4% of housing price variance on the 20,640-sample California dataset. LightGBM Regressor edges it slightly higher (R²=0.834) — both far outperform linear baselines.'
+  }
+];
+
+function renderScen(idx){
+  const s = SCENARIOS[idx];
+  const metrics = s.metrics.map(m => `
+    <div class="res-card">
+      <div class="res-label">${m.label}</div>
+      <div class="res-val" style="color:${m.color}">${m.val}</div>
+      <div class="res-sub">${m.sub}</div>
+    </div>`).join('');
+  document.getElementById('scenOutput').innerHTML = `
+    <div style="font-size:.82rem;font-weight:700;color:var(--text);margin-bottom:12px">${s.title}</div>
+    <div class="result-grid">${metrics}</div>
+    <div class="risk-bar-wrap">
+      <div class="risk-bar-label">
+        <span style="color:var(--muted);font-size:.78rem">${s.bar.label}</span>
+        <span style="color:${s.bar.color};font-weight:700;font-size:.82rem">${s.bar.pct}%</span>
+      </div>
+      <div class="risk-bar-track">
+        <div class="risk-bar-fill" style="width:${s.bar.pct}%;background:${s.bar.color}"></div>
+      </div>
+    </div>
+    <div style="background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.15);border-radius:8px;padding:12px 16px;font-size:.82rem;color:var(--muted);line-height:1.65;margin-top:4px">${s.insight}</div>`;
+}
+function selectScen(idx, btn){
+  document.querySelectorAll('.scen-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderScen(idx);
+}
+renderScen(0);
+
+
+/* ─── CHARTS ─── */
+const charts = {};
+
+function buildChart(i){
+  if(charts[i]) charts[i].destroy();
+  const ctx = document.getElementById('chart' + i);
+  if(!ctx) return;
+  const g = gc(), t = tc(), tip = tt();
+
+  if(i === 0){
+    // Classification accuracy
+    charts[0] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['LightGBM\n(Wine)', 'SVC RBF\n(Cancer)', 'Random Forest\n(Iris)', 'XGBoost\n(Wine)', 'MLP Medium\n(Wine)'],
+        datasets:[{
+          label: 'Accuracy (%)',
+          data: [97.22, 97.37, 96.67, 96.00, 94.44],
+          backgroundColor: [
+            'rgba(34,197,94,.8)',
+            'rgba(168,85,247,.8)',
+            'rgba(79,70,229,.8)',
+            'rgba(245,158,11,.8)',
+            'rgba(239,68,68,.75)'
+          ],
+          borderRadius: 6
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:t}}, tooltip:tip },
+        scales:{
+          x:{ ticks:{color:t}, grid:{color:g} },
+          y:{ ticks:{color:t}, grid:{color:g}, min:90, title:{display:true, text:'Accuracy (%)', color:t, font:{size:11}} }
+        }
+      }
+    });
+
+  } else if(i === 1){
+    // Dataset sample distribution (doughnut)
+    charts[1] = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: ['California Housing', 'Breast Cancer', 'Wine Quality', 'Diabetes Progression', 'Iris Flowers'],
+        datasets:[{
+          data: [20640, 569, 178, 442, 150],
+          backgroundColor: [
+            'rgba(245,158,11,.8)',
+            'rgba(168,85,247,.8)',
+            'rgba(34,197,94,.8)',
+            'rgba(6,182,212,.8)',
+            'rgba(79,70,229,.8)'
+          ],
+          borderColor: isDark() ? 'rgba(7,13,31,1)' : 'rgba(248,250,252,1)',
+          borderWidth: 3
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:t}}, tooltip:tip }
+      }
+    });
+
+  } else if(i === 2){
+    // Regression R² scores
+    charts[2] = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ['LightGBM\nRegressor', 'XGBoost\nRegressor', 'Random Forest\nRegressor', 'Ridge\nRegression', 'Lasso'],
+        datasets:[
+          {
+            label: 'R² Score (California Housing)',
+            data: [0.834, 0.832, 0.805, 0.461, 0.441],
+            backgroundColor: isDark() ? 'rgba(245,158,11,.75)' : 'rgba(217,119,6,.7)',
+            borderRadius: 6
+          },
+          {
+            label: 'R² Score (Diabetes Progression)',
+            data: [0.482, 0.483, 0.451, 0.461, 0.380],
+            backgroundColor: isDark() ? 'rgba(79,70,229,.6)' : 'rgba(79,70,229,.55)',
+            borderRadius: 6
+          }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:t}}, tooltip:tip },
+        scales:{
+          x:{ ticks:{color:t}, grid:{color:g} },
+          y:{ ticks:{color:t}, grid:{color:g}, min:0, max:1, title:{display:true, text:'R² Score', color:t, font:{size:11}} }
+        }
+      }
+    });
+  }
+}
+
+function switchTab(i, el){
+  document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.chart-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('cp' + i).classList.add('active');
+  buildChart(i);
+}
+
+buildChart(0);
+</script>
+
+</body>
+</html>
