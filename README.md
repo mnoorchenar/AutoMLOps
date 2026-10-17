@@ -19,8 +19,12 @@ pinned: false
 [![Airflow](https://img.shields.io/badge/Apache_Airflow-2.10-017CEE?style=for-the-badge&logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
 [![MLflow](https://img.shields.io/badge/MLflow-2.x-0194E2?style=for-the-badge&logo=mlflow&logoColor=white)](https://mlflow.org/)
 [![Docker](https://img.shields.io/badge/Docker-Ready-3b82f6?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![HuggingFace](https://img.shields.io/badge/HuggingFace-Spaces-ffcc00?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/mnoorchenar/spaces)
 [![Status](https://img.shields.io/badge/Status-Active-22c55e?style=for-the-badge)](#)
+
+<br/>
+
+[![Live Demo](https://img.shields.io/badge/%E2%96%B6_Live_Demo-Hugging_Face_Space-ffcc00?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/mnoorchenar/AutoMLOps)
+[![Source Code](https://img.shields.io/badge/Source_Code-GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/mnoorchenar/AutoMLOps)
 
 <br/>
 
@@ -44,7 +48,7 @@ pinned: false
 - [Project Structure](#-project-structure)
 - [Author](#-author)
 - [Contributing](#-contributing)
-- [Disclaimer](#disclaimer)
+- [Disclaimer](#️-disclaimer)
 - [License](#-license)
 
 ---
@@ -251,33 +255,39 @@ ALGORITHMS = {
 ```
 AutoMLOps/
 │
+├── 📂 dags/                      # Apache Airflow DAG files (parsed by scheduler)
+│   ├── __init__.py
+│   ├── data_pipeline.py
+│   ├── retraining_pipeline.py
+│   └── training_pipeline.py
 ├── 📂 mlops/
-│   ├── algorithms.py        # 50+ algorithm registry (classification + regression)
-│   ├── datasets.py          # Dataset loaders (sklearn built-ins + California Housing)
-│   ├── trainer.py           # Training & AutoML job management
-│   └── airflow_runner.py    # Apache Airflow DAG trigger & watcher
-│
+│   ├── __init__.py
+│   ├── airflow_runner.py
+│   ├── algorithms.py
+│   ├── datasets.py
+│   └── trainer.py
 ├── 📂 pipelines/
-│   ├── dag_engine.py        # Built-in DAG execution engine (fallback)
-│   └── pipeline_defs.py     # Training / Retraining / Data pipeline definitions
-│
-├── 📂 dags/                 # Apache Airflow DAG files (parsed by scheduler)
-│
-├── 📂 templates/
-│   ├── base.html            # Base layout: sidebar + topnav + theme toggle
-│   ├── pipeline.html        # Pipeline Studio (home page — interactive DAG canvas)
-│   ├── automl.html          # AutoML experiment launcher
-│   └── models.html          # Model Registry browser
-│
-├── 📂 static/
-│   ├── css/style.css        # Global styles + dark/light theme CSS variables
-│   └── js/app.js            # Shared JS (toasts, theme switching)
-│
-├── 📄 app.py                # Flask application entry point + all API routes
-├── 📄 Dockerfile            # Single-container image (Flask + Airflow)
-├── 📄 start.sh              # Startup: Airflow scheduler → Gunicorn Flask
-├── 📄 requirements.txt      # Python dependencies
-└── 📄 README.md
+│   ├── __init__.py
+│   ├── dag_engine.py
+│   └── pipeline_defs.py
+├── 📂 static/                    # CSS, JavaScript & assets
+│   ├── css/
+│   └── js/
+├── 📂 templates/                 # HTML templates
+│   ├── automl.html
+│   ├── base.html
+│   ├── dashboard.html
+│   ├── experiments.html
+│   ├── models.html
+│   ├── pipeline.html
+│   └── … 1 more
+├── 📄 Dockerfile                 # Single-container image (Flask + Airflow)
+├── 📄 app.py                     # Flask application entry point + all API routes
+├── 📄 docs-template.html
+├── 📄 docs.html
+├── 📄 readme-template.md
+├── 📄 requirements.txt           # Python dependencies
+└── 📄 start.sh                   # Startup: Airflow scheduler → Gunicorn Flask
 ```
 
 ---
@@ -302,7 +312,7 @@ AutoMLOps/
 
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/mnoorchenar)&nbsp;
 [![Personal Site](https://img.shields.io/badge/Website-mnoorchenar.github.io-4f46e5?style=for-the-badge&logo=githubpages&logoColor=white)](https://mnoorchenar.github.io/)&nbsp;
-[![HuggingFace](https://img.shields.io/badge/HuggingFace-ffcc00?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/mnoorchenar/spaces)&nbsp;
+[![HuggingFace](https://img.shields.io/badge/HuggingFace-ffcc00?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/mnoorchenar)&nbsp;
 [![Google Scholar](https://img.shields.io/badge/Scholar-4285F4?style=for-the-badge&logo=googlescholar&logoColor=white)](https://scholar.google.ca/citations?user=nn_Toq0AAAAJ&hl=en)&nbsp;
 [![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/mnoorchenar)
 
@@ -326,15 +336,16 @@ Contributions are welcome! Please follow these steps:
 
 ---
 
-## Disclaimer
+## ⚠️ Disclaimer
 
-<span style="color:red">This project is developed strictly for educational and research purposes and does not constitute professional advice of any kind. All datasets used are either synthetically generated or publicly available — no real user data is stored. This software is provided "as is" without warranty of any kind; use at your own risk.</span>
+> [!WARNING]
+> This project is developed strictly for educational and research purposes and does not constitute professional advice of any kind. All datasets used are either synthetically generated or publicly available — no real user data is stored. This software is provided "as is" without warranty of any kind; use at your own risk.
 
 ---
 
 ## 📜 License
 
-Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
+Distributed under the **MIT License**.
 
 ---
 
@@ -342,9 +353,9 @@ Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more informa
 
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:3b82f6,100:4f46e5&height=120&section=footer&text=Made%20with%20%E2%9D%A4%EF%B8%8F%20by%20Mohammad%20Noorchenarboo&fontColor=ffffff&fontSize=18&fontAlignY=80" width="100%"/>
 
-[![GitHub Stars](https://img.shields.io/github/stars/mnoorchenar/AutoMLOps?style=social)](https://github.com/mnoorchenar/AutoMLOps)
+[![GitHub Stars](https://img.shields.io/github/stars/mnoorchenar/AutoMLOps?style=social)](https://github.com/mnoorchenar/AutoMLOps/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/mnoorchenar/AutoMLOps?style=social)](https://github.com/mnoorchenar/AutoMLOps/fork)
 
-<sub>The name "AutoMLOps" is used purely for academic and research purposes. Any similarity to existing company names, products, or trademarks is entirely coincidental and unintentional. This project has no affiliation with any commercial entity.</sub>
+<sub>The name "AutoMLOps" is used purely for academic and research purposes. Any similarity to existing product names or trademarks is entirely coincidental. This project has no affiliation with any commercial entity.</sub>
 
 </div>
